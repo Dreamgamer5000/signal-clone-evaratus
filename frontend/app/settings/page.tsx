@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Avatar, AVATAR_COLORS, AVATAR_COLOR_KEYS } from '@/components/Avatar';
 import { ComingSoonModal } from '@/components/ComingSoonModal';
 import { getSettings, patchSettings, patchMe } from '@/lib/api';
+import { resolveTheme, applyTheme, type ThemeSetting } from '@/lib/theme';
 import { fetchMe, logout } from '@/lib/auth';
 import { useAppStore } from '@/lib/store';
 import type { User } from '@/lib/types';
@@ -40,7 +41,7 @@ function ToggleRow({
         }`}
       >
         <span
-          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+          className={`absolute top-0.5 w-5 h-5 rounded-full bg-surface shadow transition-transform ${
             enabled ? 'translate-x-[22px]' : 'translate-x-0.5'
           }`}
         />
@@ -57,6 +58,7 @@ export default function SettingsPage() {
   const [section, setSection] = useState<Section>('privacy');
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [comingSoon, setComingSoon] = useState<string | null>(null);
+  const [themeSetting, setThemeSetting] = useState<ThemeSetting>('system');
   const [editingProfile, setEditingProfile] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [about, setAbout] = useState('');
@@ -79,9 +81,27 @@ export default function SettingsPage() {
 
   useEffect(() => {
     getSettings()
-      .then(setSettings)
+      .then((s) => {
+        setSettings(s);
+        const t = (s.theme ?? 'system') as ThemeSetting;
+        setThemeSetting(t);
+        localStorage.setItem('theme', t);
+        applyTheme(
+          resolveTheme(t, window.matchMedia('(prefers-color-scheme: dark)').matches),
+        );
+      })
       .catch(() => {});
   }, []);
+
+  function setTheme(t: ThemeSetting) {
+    setThemeSetting(t);
+    localStorage.setItem('theme', t);
+    applyTheme(
+      resolveTheme(t, window.matchMedia('(prefers-color-scheme: dark)').matches),
+    );
+    setSettings((prev) => ({ ...prev, theme: t }));
+    patchSettings({ theme: t }).catch(() => pushToast('Could not save theme'));
+  }
 
   useEffect(() => {
     if (me) {
@@ -129,14 +149,14 @@ export default function SettingsPage() {
 
   if (!me) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="w-8 h-8 rounded-full border-2 border-ultramarine border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-surface">
       <header className="h-[52px] px-4 flex items-center gap-3 border-b border-gray-15">
         <button
           type="button"
@@ -236,19 +256,28 @@ export default function SettingsPage() {
           )}
           {section === 'appearance' && (
             <>
-              <button
-                type="button"
-                onClick={() => setComingSoon('Dark mode')}
-                className="w-full h-16 px-4 flex items-center gap-4 hover:bg-gray-02 text-left"
-              >
+              <div className="w-full min-h-16 px-4 py-3 flex items-center gap-4">
                 <div className="flex-1">
                   <div className="text-[15px] text-gray-90">Theme</div>
-                  <div className="text-xs text-gray-60">Light — dark mode coming soon</div>
+                  <div className="text-xs text-gray-60">Light, dark, or follow your system</div>
                 </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#848484" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
-              </button>
+                <div className="flex gap-1">
+                  {(['light', 'dark', 'system'] as ThemeSetting[]).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTheme(t)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
+                        themeSetting === t
+                          ? 'bg-ultramarine text-white'
+                          : 'bg-gray-04 text-gray-60 hover:bg-gray-05'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <ToggleRow
                 label="Message bubbles show timestamps"
                 description="Display the time inside each bubble"
@@ -292,7 +321,7 @@ export default function SettingsPage() {
             aria-modal="true"
             aria-label="Edit profile"
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5"
+            className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-5"
           >
             <h2 className="text-lg font-semibold text-gray-90 mb-4">Edit profile</h2>
             <div className="flex justify-center mb-4">

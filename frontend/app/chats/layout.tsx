@@ -78,14 +78,14 @@ function ChatShell({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="w-8 h-8 rounded-full border-2 border-ultramarine border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white">
+    <div className="flex h-screen overflow-hidden bg-surface">
       <aside
         className={`${chatOpen ? 'hidden md:flex' : 'flex'} w-full md:w-[380px] shrink-0 border-r border-gray-15 flex-col`}
       >

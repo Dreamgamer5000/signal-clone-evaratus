@@ -29,7 +29,7 @@ export function Modal({ title, onClose, children, wide = false }: ModalProps) {
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className={`bg-white rounded-2xl shadow-xl w-full ${wide ? 'max-w-lg' : 'max-w-sm'} max-h-[85vh] flex flex-col`}
+        className={`bg-surface rounded-2xl shadow-xl w-full ${wide ? 'max-w-lg' : 'max-w-sm'} max-h-[85vh] flex flex-col`}
       >
         <div className="h-[52px] px-4 flex items-center border-b border-gray-15 shrink-0">
           <h2 className="text-lg font-semibold text-gray-90 flex-1">{title}</h2>

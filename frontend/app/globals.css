@@ -5,6 +5,7 @@
 @source "../lib";
 
 @theme {
+  --color-surface: #ffffff;
   --color-ultramarine: #2c6bed;
   --color-ultramarine-dark: #1851b4;
   --color-ultramarine-light: #6191f3;
@@ -33,4 +34,32 @@
   --font-sans: Inter, 'Source Sans Pro', 'Source Han Sans', 'Signal Emoji Large',
     'Signal Emoji Small', -apple-system, system-ui, 'Segoe UI', 'Noto Sans',
     'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+[data-theme='dark'] {
+  --color-surface: #121212;
+  --color-ultramarine: #4c8dff;
+  --color-ultramarine-dark: #2c6bed;
+  --color-ultramarine-light: #8ab4ff;
+  --color-signal-green: #66c26a;
+  --color-signal-red: #ff6b5e;
+  --color-signal-yellow: #ffd624;
+
+  --color-gray-02: #1b1b1b;
+  --color-gray-04: #262626;
+  --color-gray-05: #2e2e2e;
+  --color-gray-15: #3b3b3b;
+  --color-gray-20: #474747;
+  --color-gray-25: #525252;
+  --color-gray-40: #777777;
+  --color-gray-45: #848484;
+  --color-gray-60: #a3a3a3;
+  --color-gray-62: #b0b0b0;
+  --color-gray-65: #b9b9b9;
+  --color-gray-75: #c6c6c6;
+  --color-gray-78: #d4d4d4;
+  --color-gray-80: #dedede;
+  --color-gray-85: #e2e2e2;
+  --color-gray-90: #f0f0f0;
+  --color-gray-95: #f6f6f6;
 }

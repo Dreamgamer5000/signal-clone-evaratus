@@ -52,7 +52,7 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-gray-15 px-3 py-2 flex items-end gap-2 bg-white shrink-0">
+    <div className="border-t border-gray-15 px-3 py-2 flex items-end gap-2 bg-surface shrink-0">
       <button
         type="button"
         aria-label="Emoji"

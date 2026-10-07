@@ -13,7 +13,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="font-sans antialiased bg-white text-gray-90">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "(function(){try{var s=localStorage.getItem('theme')||'system';var d=s==='dark'||(s==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})();",
+          }}
+        />
+      </head>
+      <body className="font-sans antialiased bg-surface text-gray-90">
         {children}
         <ToastHost />
       </body>

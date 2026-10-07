@@ -41,7 +41,7 @@ export function ConversationList({ onNewChat }: ConversationListProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-surface">
       <div className="h-[52px] px-3 flex items-center gap-2 border-b border-gray-15 shrink-0">
         <h1 className="text-lg font-semibold text-gray-90 flex-1">Signal</h1>
         <button
@@ -99,7 +99,7 @@ export function ConversationList({ onNewChat }: ConversationListProps) {
             className="w-full h-[72px] px-3 flex items-center gap-3 text-left hover:bg-gray-02"
           >
             <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-br from-ultramarine to-signal-red shrink-0">
-              <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-gray-45">
+              <div className="w-full h-full rounded-full bg-surface flex items-center justify-center text-gray-45">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
                   <rect x="3" y="3" width="18" height="18" rx="5" />
                   <circle cx="12" cy="12" r="3.2" />

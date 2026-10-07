@@ -294,7 +294,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   if (loadError) {
     return (
       <div className="flex flex-col h-full flex-1 min-w-0 bg-gray-02 items-center justify-center">
-        <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-4">
+        <div className="w-16 h-16 rounded-full bg-surface shadow-sm flex items-center justify-center mb-4">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#848484" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
             <circle cx="12" cy="12" r="9" />
             <path d="M12 8v4M12 16h.01" />
@@ -313,7 +313,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   }
 
   return (
-    <div className="flex flex-col h-full flex-1 min-w-0 bg-white">
+    <div className="flex flex-col h-full flex-1 min-w-0 bg-surface">
       <header className="h-[52px] px-4 flex items-center gap-3 border-b border-gray-15 shrink-0">
         <button
           type="button"
@@ -382,7 +382,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto py-3 bg-white"
+        className="flex-1 overflow-y-auto py-3 bg-surface"
       >
         {loadingOlder && (
           <div className="flex justify-center py-2">
