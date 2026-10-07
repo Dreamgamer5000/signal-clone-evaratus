@@ -83,6 +83,7 @@ export function patchConversation(
     is_pinned?: boolean;
     is_archived?: boolean;
     is_muted?: boolean;
+    disappearing_seconds?: number | null;
   },
 ): Promise<{ conversation_id: number }> {
   return apiPatch(`/api/conversations/${id}`, patch);

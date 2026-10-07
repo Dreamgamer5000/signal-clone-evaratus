@@ -67,6 +67,7 @@ export interface ConversationSummary {
   is_pinned: boolean;
   is_archived: boolean;
   is_muted: boolean;
+  disappearing_seconds?: number | null;
 }
 
 export interface Member {

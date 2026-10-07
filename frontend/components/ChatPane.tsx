@@ -8,11 +8,13 @@ import { TypingIndicator } from './TypingIndicator';
 import { Composer } from './Composer';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import { ComingSoonModal } from './ComingSoonModal';
+import { Modal } from './Modal';
 import { useAppStore } from '@/lib/store';
 import {
   ApiError,
   getConversation,
   getMessages,
+  patchConversation,
   sendReceipts,
   sendMessage,
   sendMessageWithFile,
@@ -23,6 +25,19 @@ import { dayLabel, formatListTime, isSameDay } from '@/lib/time';
 import type { ConversationSummary, Member, Message } from '@/lib/types';
 
 const PAGE_SIZE = 50;
+
+const TIMER_OPTIONS: { seconds: number | null; label: string }[] = [
+  { seconds: null, label: 'Off' },
+  { seconds: 30, label: '30 seconds' },
+  { seconds: 300, label: '5 minutes' },
+  { seconds: 3600, label: '1 hour' },
+  { seconds: 86400, label: '1 day' },
+  { seconds: 604800, label: '1 week' },
+];
+
+function timerLabel(seconds: number | null | undefined): string {
+  return TIMER_OPTIONS.find((o) => o.seconds === seconds)?.label ?? 'Off';
+}
 const EMPTY_MESSAGES: Message[] = [];
 const EMPTY_IDS: number[] = [];
 
@@ -45,6 +60,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   >(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showEncryption, setShowEncryption] = useState(false);
+  const [showTimerPicker, setShowTimerPicker] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<{
     message_id: number;
@@ -368,6 +384,19 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
         )}
         <button
           type="button"
+          aria-label="Disappearing messages"
+          onClick={() => setShowTimerPicker(true)}
+          className={`w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-02 ${
+            summary?.disappearing_seconds ? 'text-ultramarine' : 'text-gray-60'
+          }`}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+        </button>
+        <button
+          type="button"
           aria-label="Encryption info"
           onClick={() => setShowEncryption(true)}
           className="w-9 h-9 rounded-full flex items-center justify-center text-gray-60 hover:bg-gray-02"
@@ -400,6 +429,12 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
         </button>
       </header>
 
+      {summary?.disappearing_seconds ? (
+        <div className="px-4 py-1.5 bg-gray-02 text-xs text-gray-60 text-center shrink-0">
+          Disappearing messages: {timerLabel(summary.disappearing_seconds)} · new
+          messages vanish from the conversation after this time
+        </div>
+      ) : null}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -425,6 +460,41 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
           sendTyping(conversationId, active).catch(() => {})
         }
       />
+      {showTimerPicker && (
+        <Modal title="Disappearing messages" onClose={() => setShowTimerPicker(false)}>
+          <p className="text-sm text-gray-60 mb-3">
+            Choose how long messages stay in this conversation. Messages are
+            removed for everyone by the server.
+          </p>
+          {TIMER_OPTIONS.map((o) => (
+            <button
+              key={o.label}
+              type="button"
+              onClick={() => {
+                const patch = { disappearing_seconds: o.seconds };
+                patchConversation(conversationId, patch)
+                  .then(() => {
+                    setSummary((s) =>
+                      s ? { ...s, disappearing_seconds: o.seconds } : s,
+                    );
+                    setShowTimerPicker(false);
+                    loadLatest();
+                  })
+                  .catch(() =>
+                    useAppStore.getState().pushToast('Could not set timer'),
+                  );
+              }}
+              className={`w-full h-12 px-3 flex items-center rounded-lg hover:bg-gray-02 text-left text-[15px] ${
+                summary?.disappearing_seconds === o.seconds
+                  ? 'text-ultramarine font-medium'
+                  : 'text-gray-90'
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </Modal>
+      )}
       {showEncryption && (
         <ComingSoonModal
           title="End-to-end encryption"
