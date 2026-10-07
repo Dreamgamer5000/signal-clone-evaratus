@@ -22,7 +22,7 @@ export function ToastHost() {
           key={t.id}
           type="button"
           onClick={() => dismissToast(t.id)}
-          className="bg-gray-90 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg max-w-xs text-left hover:bg-gray-80"
+          className="bg-toast-bg text-toast-fg text-sm px-4 py-2.5 rounded-lg shadow-lg max-w-xs text-left hover:opacity-90"
         >
           {t.text}
         </button>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SearchBar } from './SearchBar';
 import { ConversationListItem } from './ConversationListItem';
 import { ComingSoonModal } from './ComingSoonModal';
+import { resolveTheme, applyTheme } from '@/lib/theme';
 import { useAppStore } from '@/lib/store';
 import { filterConversations, sortConversations, applyTab, type ListTab } from '@/lib/list';
 
@@ -44,6 +45,28 @@ export function ConversationList({ onNewChat }: ConversationListProps) {
     <div className="flex flex-col h-full bg-surface">
       <div className="h-[52px] px-3 flex items-center gap-2 border-b border-gray-15 shrink-0">
         <h1 className="text-lg font-semibold text-gray-90 flex-1">Signal</h1>
+        <button
+          type="button"
+          aria-label="Toggle theme"
+          title="Toggle light/dark"
+          onClick={() => {
+            const isDark = document.documentElement.dataset.theme === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            localStorage.setItem('theme', next);
+            applyTheme(next);
+            fetch('/api/settings', {
+              method: 'PATCH',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ theme: next }),
+            }).catch(() => {});
+          }}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-gray-60 hover:bg-gray-02"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+          </svg>
+        </button>
         <button
           type="button"
           onClick={() => {

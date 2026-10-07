@@ -6,6 +6,8 @@
 
 @theme {
   --color-surface: #ffffff;
+  --color-toast-bg: #1b1b1b;
+  --color-toast-fg: #f6f6f6;
   --color-ultramarine: #2c6bed;
   --color-ultramarine-dark: #1851b4;
   --color-ultramarine-light: #6191f3;
@@ -38,6 +40,8 @@
 
 [data-theme='dark'] {
   --color-surface: #121212;
+  --color-toast-bg: #2e2e2e;
+  --color-toast-fg: #f0f0f0;
   --color-ultramarine: #4c8dff;
   --color-ultramarine-dark: #2c6bed;
   --color-ultramarine-light: #8ab4ff;
