@@ -164,3 +164,24 @@ export function patchMe(patch: {
 }): Promise<{ user: User }> {
   return apiPatch('/api/users/me', patch);
 }
+
+export function addMember(
+  conversationId: number,
+  userId: number,
+): Promise<import('./types').Member> {
+  return apiPost(`/api/conversations/${conversationId}/members`, {
+    user_id: userId,
+  });
+}
+
+export function removeMember(conversationId: number, userId: number): Promise<void> {
+  return apiDelete(`/api/conversations/${conversationId}/members/${userId}`);
+}
+
+export function setMemberRole(
+  conversationId: number,
+  userId: number,
+  role: 'admin' | 'member',
+): Promise<import('./types').Member> {
+  return apiPatch(`/api/conversations/${conversationId}/members/${userId}`, { role });
+}

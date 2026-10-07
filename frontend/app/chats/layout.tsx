@@ -7,11 +7,14 @@ import { getConversations } from '@/lib/api';
 import { connectSSE } from '@/lib/sse';
 import { useAppStore } from '@/lib/store';
 import { ConversationList } from '@/components/ConversationList';
+import { NewChatModal } from '@/components/NewChatModal';
+import { NewGroupModal } from '@/components/NewGroupModal';
 
 function ChatShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
+  const [modal, setModal] = useState<'none' | 'new-chat' | 'new-group'>('none');
   const store = useAppStore;
   const connectedRef = useRef(false);
 
@@ -86,13 +89,20 @@ function ChatShell({ children }: { children: React.ReactNode }) {
       <aside
         className={`${chatOpen ? 'hidden md:flex' : 'flex'} w-full md:w-[380px] shrink-0 border-r border-gray-15 flex-col`}
       >
-        <ConversationList
-          onNewChat={() => useAppStore.getState().pushToast('New chat — coming soon')}
-        />
+        <ConversationList onNewChat={() => setModal('new-chat')} />
       </aside>
       <main className={`${chatOpen ? 'flex' : 'hidden md:flex'} flex-1 min-w-0`}>
         {children}
       </main>
+      {modal === 'new-chat' && (
+        <NewChatModal
+          onClose={() => setModal('none')}
+          onNewGroup={() => setModal('new-group')}
+        />
+      )}
+      {modal === 'new-group' && (
+        <NewGroupModal onClose={() => setModal('none')} />
+      )}
     </div>
   );
 }

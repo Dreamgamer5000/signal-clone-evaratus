@@ -6,6 +6,7 @@ import { Avatar } from './Avatar';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { Composer } from './Composer';
+import { GroupInfoPanel } from './GroupInfoPanel';
 import { useAppStore } from '@/lib/store';
 import {
   getConversation,
@@ -37,6 +38,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   const [summary, setSummary] = useState<
     (ConversationSummary & { members: Member[] }) | null
   >(null);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [oldestId, setOldestId] = useState<number | null>(null);
@@ -285,6 +287,19 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
             <div className="text-xs text-gray-60 truncate">{presenceLine}</div>
           )}
         </div>
+        {isGroup && (
+          <button
+            type="button"
+            aria-label="Group info"
+            onClick={() => setShowGroupInfo(true)}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-gray-60 hover:bg-gray-02"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8h.01M11 12h1v4h1" />
+            </svg>
+          </button>
+        )}
         <button
           type="button"
           aria-label="Call"
@@ -331,6 +346,15 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
           sendTyping(conversationId, active).catch(() => {})
         }
       />
+      {showGroupInfo && summary != null && (
+        <GroupInfoPanel
+          conversationId={conversationId}
+          title={title}
+          avatarColor={colorKey}
+          onClose={() => setShowGroupInfo(false)}
+          onChanged={loadLatest}
+        />
+      )}
     </div>
   );
 }
