@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.security import get_current_user, now_ms
-from app.models import Conversation, ConversationMember, Message, User
+from app.models import Conversation, ConversationMember, Message, MessageReceipt, User
 from app.schemas import (
     ConversationDetail,
     ConversationOut,
@@ -19,11 +19,17 @@ from app.schemas import (
     UserOut,
 )
 from app.services.conversations import get_or_create_direct
+from app.services.messages import derive_status
 
 router = APIRouter()
 
 
-def _message_out(m: Message) -> MessageOut:
+def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
+    receipts = list(
+        db.scalars(
+            select(MessageReceipt).where(MessageReceipt.message_id == m.message_id)
+        ).all()
+    )
     return MessageOut(
         message_id=m.message_id,
         conversation_id=m.conversation_id,
@@ -32,18 +38,18 @@ def _message_out(m: Message) -> MessageOut:
         body=m.body,
         kind=m.kind,
         created_at=m.created_at,
-        status="sent",
+        status=derive_status(receipts, viewer_id),
     )
 
 
-def _last_message(db: Session, conversation_id: int) -> MessageOut | None:
+def _last_message(db: Session, conversation_id: int, viewer_id: int) -> MessageOut | None:
     m = db.scalar(
         select(Message)
         .where(Message.conversation_id == conversation_id)
         .order_by(Message.created_at.desc(), Message.message_id.desc())
         .limit(1)
     )
-    return _message_out(m) if m is not None else None
+    return _message_out(db, m, viewer_id) if m is not None else None
 
 
 def _unread_count(
@@ -84,7 +90,7 @@ def _summary(
         title=conv.title,
         avatar_color=conv.avatar_color,
         peer=_peer(db, conv, me_id),
-        last_message=_last_message(db, conv.conversation_id),
+        last_message=_last_message(db, conv.conversation_id, me_id),
         unread_count=_unread_count(db, conv.conversation_id, member, me_id),
         is_pinned=bool(member.is_pinned),
         is_archived=bool(member.is_archived),

@@ -53,6 +53,11 @@ class ContactOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MessageIn(BaseModel):
+    client_id: str
+    body: str
+
+
 class MessageOut(BaseModel):
     message_id: int
     conversation_id: int
