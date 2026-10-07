@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     COOKIE_NAME: str = "sig_session"
     SESSION_TTL_DAYS: int = 30
     SSE_HEARTBEAT_SECONDS: float = 20.0
+    UPLOADS_DIR: str = "./uploads"
 
 
 settings = Settings()

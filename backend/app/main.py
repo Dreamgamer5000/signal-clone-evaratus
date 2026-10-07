@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.api.attachments import router as attachments_router
 from app.api.auth import router as auth_router
 from app.api.contacts import router as contacts_router
 from app.api.conversations import router as conversations_router
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
     app.include_router(receipts_router, prefix="/api/conversations", tags=["receipts"])
     app.include_router(events_router, prefix="/api", tags=["events"])
     app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
+    app.include_router(attachments_router, prefix="/api/attachments", tags=["attachments"])
     return app
 
 

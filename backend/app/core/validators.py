@@ -80,3 +80,28 @@ def about_text(raw: str | None) -> str | None:
     if len(value) > 200:
         raise ValueError("must be at most 200 characters")
     return value or None
+
+
+ALLOWED_ATTACHMENT_MIMES = {
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "video/mp4",
+    "audio/mpeg",
+    "application/pdf",
+    "text/plain",
+    "application/zip",
+}
+MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+
+
+def safe_file_name(raw: str | None) -> str:
+    """Sanitize an original file name: strip path separators and control chars,
+    collapse whitespace runs, cap at 120 chars."""
+    value = raw or ""
+    value = value.replace("/", "").replace("\\", "")
+    value = "".join(ch for ch in value if " " <= ch != "\x7f")
+    value = re.sub(r"\s+", " ", value).strip()
+    value = value[:120].strip()
+    return value or "file"

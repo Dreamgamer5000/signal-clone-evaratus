@@ -164,6 +164,32 @@ class Message(Base):
     )
 
 
+class Attachment(Base):
+    __tablename__ = "attachments"
+
+    attachment_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    message_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+    )
+    file_name: Mapped[str] = mapped_column(Text, nullable=False)
+    mime_type: Mapped[str] = mapped_column(Text, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage_path: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "size_bytes > 0 AND size_bytes <= 10485760",
+            name="ck_attachments_size_bytes",
+        ),
+        Index("ix_attachments_message_id", "message_id"),
+        Index("ix_attachments_user_id", "user_id"),
+    )
+
+
 class MessageReceipt(Base):
     __tablename__ = "message_receipts"
 

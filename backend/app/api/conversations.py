@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.security import get_current_user, now_ms
-from app.models import Conversation, ConversationMember, Message, MessageReceipt, User
+from app.models import Attachment, Conversation, ConversationMember, Message, MessageReceipt, User
 from app.schemas import (
+    AttachmentOut,
     ConversationDetail,
     ConversationOut,
     ConversationPatchIn,
@@ -32,6 +33,17 @@ def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
         ).all()
     )
     sender = db.get(User, m.sender_id)
+    attachments = [
+        AttachmentOut(
+            attachment_id=a.attachment_id,
+            file_name=a.file_name,
+            mime_type=a.mime_type,
+            size_bytes=a.size_bytes,
+        )
+        for a in db.scalars(
+            select(Attachment).where(Attachment.message_id == m.message_id)
+        ).all()
+    ]
     return MessageOut(
         message_id=m.message_id,
         conversation_id=m.conversation_id,
@@ -42,6 +54,7 @@ def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
         created_at=m.created_at,
         status=derive_status(receipts, viewer_id),
         sender_name=sender.display_name if sender is not None else None,
+        attachments=attachments,
     )
 
 

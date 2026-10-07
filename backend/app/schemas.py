@@ -85,6 +85,13 @@ class MessageIn(BaseModel):
     body: MessageBody
 
 
+class AttachmentOut(BaseModel):
+    attachment_id: int
+    file_name: str
+    mime_type: str
+    size_bytes: int
+
+
 class MessageOut(BaseModel):
     message_id: int
     conversation_id: int
@@ -95,6 +102,7 @@ class MessageOut(BaseModel):
     created_at: int
     status: str = "sent"
     sender_name: str | None = None
+    attachments: list[AttachmentOut] = []
 
 
 class ReceiptIn(BaseModel):
