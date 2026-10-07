@@ -11,12 +11,14 @@ from app.core.validators import (
     trimmed,
     trimmed_optional,
     validate_client_id,
+    validate_emoji,
     validate_username,
 )
 
 Phone = Annotated[str, AfterValidator(normalize_phone)]
 Username = Annotated[str, AfterValidator(validate_username)]
 ClientId = Annotated[str, AfterValidator(validate_client_id)]
+ReactionEmoji = Annotated[str, AfterValidator(validate_emoji)]
 DisplayName = Annotated[str, AfterValidator(trimmed(1, 80))]
 Nickname = Annotated[str | None, AfterValidator(trimmed_optional(80))]
 About = Annotated[str | None, AfterValidator(about_text)]
@@ -85,11 +87,20 @@ class MessageIn(BaseModel):
     body: MessageBody
 
 
+class ReactionIn(BaseModel):
+    emoji: ReactionEmoji
+
+
 class AttachmentOut(BaseModel):
     attachment_id: int
     file_name: str
     mime_type: str
     size_bytes: int
+
+
+class ReactionOut(BaseModel):
+    emoji: str
+    user_ids: list[int] = []
 
 
 class MessageOut(BaseModel):
@@ -103,6 +114,7 @@ class MessageOut(BaseModel):
     status: str = "sent"
     sender_name: str | None = None
     attachments: list[AttachmentOut] = []
+    reactions: list[ReactionOut] = []
 
 
 class ReceiptIn(BaseModel):

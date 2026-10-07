@@ -190,6 +190,27 @@ class Attachment(Base):
     )
 
 
+class MessageReaction(Base):
+    __tablename__ = "message_reactions"
+
+    reaction_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    message_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+    )
+    emoji: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "message_id", "user_id", "emoji", name="uq_message_reactions_message_user_emoji"
+        ),
+        Index("ix_message_reactions_message_id", "message_id"),
+    )
+
+
 class MessageReceipt(Base):
     __tablename__ = "message_receipts"
 

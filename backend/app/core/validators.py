@@ -82,6 +82,21 @@ def about_text(raw: str | None) -> str | None:
     return value or None
 
 
+REACTION_EMOJI = (
+    "👍", "❤️", "😂", "😮", "😢", "😡", "🎉", "🙏",
+    "👀", "💯", "🔥", "✅", "👏", "😊", "🤔", "😴",
+    "🥳", "😎", "🤝", "👋", "🫡", "💪", "🎯", "🚀",
+    "☕", "🍕", "🌟", "😭", "🤗", "😅", "🙃", "🫶",
+)
+
+
+def validate_emoji(raw: str) -> str:
+    """Reaction emoji must be an exact member of the 32-emoji allow-list."""
+    if raw not in REACTION_EMOJI:
+        raise ValueError("emoji must be one of the allowed reactions")
+    return raw
+
+
 ALLOWED_ATTACHMENT_MIMES = {
     "image/png",
     "image/jpeg",

@@ -7,7 +7,15 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.security import get_current_user, now_ms
-from app.models import Attachment, Conversation, ConversationMember, Message, MessageReceipt, User
+from app.models import (
+    Attachment,
+    Conversation,
+    ConversationMember,
+    Message,
+    MessageReaction,
+    MessageReceipt,
+    User,
+)
 from app.schemas import (
     AttachmentOut,
     ConversationDetail,
@@ -18,6 +26,7 @@ from app.schemas import (
     GroupIn,
     MemberOut,
     MessageOut,
+    ReactionOut,
     UserOut,
 )
 from app.services.conversations import get_or_create_direct
@@ -44,6 +53,16 @@ def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
             select(Attachment).where(Attachment.message_id == m.message_id)
         ).all()
     ]
+    by_emoji: dict[str, list[int]] = {}
+    for emoji, user_id in db.execute(
+        select(MessageReaction.emoji, MessageReaction.user_id)
+        .where(MessageReaction.message_id == m.message_id)
+        .order_by(MessageReaction.emoji, MessageReaction.user_id)
+    ):
+        by_emoji.setdefault(emoji, []).append(user_id)
+    reactions = [
+        ReactionOut(emoji=emoji, user_ids=sorted(uids)) for emoji, uids in by_emoji.items()
+    ]
     return MessageOut(
         message_id=m.message_id,
         conversation_id=m.conversation_id,
@@ -55,6 +74,7 @@ def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
         status=derive_status(receipts, viewer_id),
         sender_name=sender.display_name if sender is not None else None,
         attachments=attachments,
+        reactions=reactions,
     )
 
 

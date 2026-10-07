@@ -3,10 +3,11 @@ from pathlib import Path as FsPath
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, Response
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile
 
@@ -20,8 +21,23 @@ from app.core.validators import (
     safe_file_name,
     validate_client_id,
 )
-from app.models import Attachment, Conversation, ConversationMember, Message, MessageReceipt, User
-from app.schemas import AttachmentOut, MessageIn, MessageOut
+from app.models import (
+    Attachment,
+    Conversation,
+    ConversationMember,
+    Message,
+    MessageReaction,
+    MessageReceipt,
+    User,
+)
+from app.schemas import (
+    AttachmentOut,
+    MessageIn,
+    MessageOut,
+    ReactionEmoji,
+    ReactionIn,
+    ReactionOut,
+)
 from app.services.conversations import member_ids
 from app.services.messages import add_receipt_rows, derive_status
 
@@ -73,11 +89,43 @@ def _attachments_for(
     return out
 
 
+def _reactions_for(
+    db: Session, message_ids: list[int]
+) -> dict[int, list[ReactionOut]]:
+    if not message_ids:
+        return {}
+    rows = db.execute(
+        select(MessageReaction.message_id, MessageReaction.emoji, MessageReaction.user_id)
+        .where(MessageReaction.message_id.in_(message_ids))
+        .order_by(MessageReaction.emoji, MessageReaction.user_id)
+    ).all()
+    grouped: dict[int, dict[str, list[int]]] = {}
+    for message_id, emoji, user_id in rows:
+        grouped.setdefault(message_id, {}).setdefault(emoji, []).append(user_id)
+    return {
+        mid: [ReactionOut(emoji=emoji, user_ids=sorted(uids)) for emoji, uids in by_emoji.items()]
+        for mid, by_emoji in grouped.items()
+    }
+
+
+def _reaction_out(db: Session, message_id: int, emoji: str) -> ReactionOut:
+    user_ids = sorted(
+        db.scalars(
+            select(MessageReaction.user_id).where(
+                MessageReaction.message_id == message_id,
+                MessageReaction.emoji == emoji,
+            )
+        ).all()
+    )
+    return ReactionOut(emoji=emoji, user_ids=user_ids)
+
+
 def _message_out(
     m: Message,
     status: str,
     sender_name: str | None = None,
     attachments: list[AttachmentOut] | None = None,
+    reactions: list[ReactionOut] | None = None,
 ) -> MessageOut:
     return MessageOut(
         message_id=m.message_id,
@@ -90,6 +138,7 @@ def _message_out(
         status=status,
         sender_name=sender_name,
         attachments=attachments or [],
+        reactions=reactions or [],
     )
 
 
@@ -178,6 +227,7 @@ async def send_message(
             derive_status(receipts, user.user_id),
             sender.display_name,
             _attachments_for(db, [existing.message_id]).get(existing.message_id, []),
+            _reactions_for(db, [existing.message_id]).get(existing.message_id, []),
         )
     size = 0
     rel = ""
@@ -250,6 +300,7 @@ def list_messages(
     )[::-1]
     receipts = _receipts_for(db, [m.message_id for m in rows])
     attachments = _attachments_for(db, [m.message_id for m in rows])
+    reactions = _reactions_for(db, [m.message_id for m in rows])
     sender_names = {
         u.user_id: u.display_name
         for u in db.scalars(select(User).where(User.user_id.in_({m.sender_id for m in rows})))
@@ -260,6 +311,101 @@ def list_messages(
             derive_status(receipts.get(m.message_id, []), user.user_id),
             sender_names.get(m.sender_id),
             attachments.get(m.message_id, []),
+            reactions.get(m.message_id, []),
         )
         for m in rows
     ]
+
+
+def _require_message_in_conversation(
+    db: Session, conversation_id: int, message_id: int
+) -> Message:
+    msg = db.scalar(
+        select(Message).where(
+            Message.message_id == message_id,
+            Message.conversation_id == conversation_id,
+        )
+    )
+    if msg is None:
+        raise HTTPException(404, "message not found")
+    return msg
+
+
+@router.post(
+    "/{conversation_id}/messages/{message_id}/reactions", response_model=ReactionOut
+)
+def add_reaction(
+    conversation_id: Annotated[int, Path(ge=1)],
+    message_id: Annotated[int, Path(ge=1)],
+    payload: ReactionIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ReactionOut:
+    _require_membership(db, conversation_id, user.user_id)
+    _require_message_in_conversation(db, conversation_id, message_id)
+    existing = db.scalar(
+        select(MessageReaction).where(
+            MessageReaction.message_id == message_id,
+            MessageReaction.user_id == user.user_id,
+            MessageReaction.emoji == payload.emoji,
+        )
+    )
+    if existing is None:
+        db.add(
+            MessageReaction(
+                message_id=message_id,
+                user_id=user.user_id,
+                emoji=payload.emoji,
+                created_at=now_ms(),
+            )
+        )
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+    out = _reaction_out(db, message_id, payload.emoji)
+    broker.publish(
+        member_ids(db, conversation_id),
+        "reaction.updated",
+        {
+            "conversation_id": conversation_id,
+            "message_id": message_id,
+            "emoji": payload.emoji,
+            "user_ids": out.user_ids,
+        },
+    )
+    return out
+
+
+@router.delete(
+    "/{conversation_id}/messages/{message_id}/reactions/{emoji}", status_code=204
+)
+def remove_reaction(
+    conversation_id: Annotated[int, Path(ge=1)],
+    message_id: Annotated[int, Path(ge=1)],
+    emoji: ReactionEmoji,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    _require_membership(db, conversation_id, user.user_id)
+    _require_message_in_conversation(db, conversation_id, message_id)
+    db.execute(
+        delete(MessageReaction).where(
+            MessageReaction.message_id == message_id,
+            MessageReaction.user_id == user.user_id,
+            MessageReaction.emoji == emoji,
+        )
+    )
+    db.commit()
+    out = _reaction_out(db, message_id, emoji)
+    broker.publish(
+        member_ids(db, conversation_id),
+        "reaction.updated",
+        {
+            "conversation_id": conversation_id,
+            "message_id": message_id,
+            "emoji": emoji,
+            "user_ids": out.user_ids,
+        },
+    )
+    return Response(status_code=204)
