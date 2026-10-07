@@ -64,6 +64,8 @@ conversation_members (
   is_archived          INTEGER NOT NULL DEFAULT 0,
   is_pinned            INTEGER NOT NULL DEFAULT 0,
   is_muted             INTEGER NOT NULL DEFAULT 0,
+  disappearing_seconds INTEGER NULL CHECK (disappearing_seconds IS NULL
+                        OR disappearing_seconds IN (30,300,3600,86400,604800)),
   PRIMARY KEY (conversation_id, user_id)
 )                                              -- INDEX (user_id, is_archived, is_pinned)
 
@@ -75,6 +77,9 @@ messages (
   body            TEXT NOT NULL,
   kind            TEXT NOT NULL DEFAULT 'text' CHECK (kind IN ('text','system')),
   created_at      INTEGER NOT NULL,
+  reply_to_message_id  INTEGER NULL REFERENCES messages(message_id) ON DELETE SET NULL,
+  reply_to_body        TEXT NULL,      -- quote snapshot (survives deletion)
+  reply_to_sender_name TEXT NULL,
   UNIQUE (sender_id, client_id)
 )                                              -- INDEX (conversation_id, created_at, message_id)
 
@@ -85,6 +90,26 @@ message_receipts (
   read_at      INTEGER,
   PRIMARY KEY (message_id, user_id)
 )                                              -- INDEX (user_id, read_at)
+
+attachments (
+  attachment_id INTEGER PRIMARY KEY,
+  message_id    INTEGER NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
+  user_id       INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  file_name     TEXT NOT NULL,
+  mime_type     TEXT NOT NULL,
+  size_bytes    INTEGER NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 10485760),
+  storage_path  TEXT NOT NULL UNIQUE,
+  created_at    INTEGER NOT NULL
+)                                             -- INDEX (message_id), INDEX (user_id)
+
+message_reactions (
+  reaction_id INTEGER PRIMARY KEY,
+  message_id  INTEGER NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
+  user_id     INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  emoji       TEXT NOT NULL,
+  created_at  INTEGER NOT NULL,
+  UNIQUE (message_id, user_id, emoji)
+)                                             -- INDEX (message_id)
 
 user_settings (
   user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,

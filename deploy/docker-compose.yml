@@ -11,6 +11,7 @@ services:
     environment:
       - DATABASE_URL=sqlite:////data/app.db
       - SSE_HEARTBEAT_SECONDS=20
+      - UPLOADS_DIR=/data/uploads
     volumes:
       - signal_data:/data
     networks:

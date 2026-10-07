@@ -41,6 +41,16 @@ bidirectional throughput of a raw socket.
 - **Signal experience** — conversation list (search, unread pills, pinned,
   previews), date dividers, toasts, settings shells, "Coming Soon" modals
   (calls, stories, linked devices)
+- **Attachments** — images, video, audio, PDF, text and zip files in
+  messages (10 MiB cap, member-only downloads)
+- **Reactions** — quick-emoji hover picker and toggleable emoji chips
+- **Quoted replies** — reply from the hover menu; quotes survive deletion of
+  the original
+- **Disappearing messages** — per-conversation timers (30 s – 1 week),
+  server-enforced sweep with system notices
+- **Dark mode** — Signal dark palette, Light/Dark/System, FOUC-free
+- **Keyboard shortcuts** — ⌘K search, ⌘N new chat, Alt+↑/↓, `/` composer,
+  `?` help
 - **Input validation** — every request is constrained at the schema boundary
   (422 with field-level errors): phone numbers normalize to `+1` + 10 digits,
   usernames 3–32 `[a-z0-9._-]`, display names 1–80 chars, message bodies
@@ -134,16 +144,17 @@ event catalog, or run the backend and open `http://localhost:8000/docs`
 ## Testing
 
 ```bash
-cd backend  && .venv/bin/pytest          # 50 tests
-cd frontend && npm test                  # vitest: time, status ticks, store, SSE reconnect
+cd backend  && .venv/bin/pytest          # 73 tests
+cd frontend && npm test                  # vitest: time, status ticks, store, SSE, theme, shortcuts
              && npm run typecheck        # tsc --noEmit
 ```
 
 Coverage includes: auth/registration flows, contact + conversation CRUD,
 idempotent sends, the receipt state machine, group admin guards, input
 validation (27 constraint tests), multi-session presence and delivery
-(two-tab fan-out), a live-SSE integration test, and a full end-to-end
-conversation flow (register → contact → typing → send → delivered → read).
+(two-tab fan-out), attachments, reactions, replies, disappearing-message
+sweeps, and two live-SSE end-to-end flows (core: register → contact → typing →
+send → delivered → read; bonus: upload → react → reply → vanish).
 
 ## Deployment
 
@@ -162,17 +173,11 @@ copy `deploy/.env.example` to `deploy/.env` (gitignored) and fill in your own
 values before deploying. Image references resolve to
 `$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPO_NAME/signal-{backend,frontend}`.
 
-## Roadmap — bonus stages
+## Bonus stages — shipped
 
-The optional assignment bonuses are planned in **`docs/bonus-plan.md`**
-(each stage independently shippable):
-
-1. **Attachments** — images/files in messages
-2. **Reactions** — emoji reactions on messages
-3. **Reply / quote** — quoted replies
-4. **Disappearing messages** — functional per-conversation timers
-5. **Dark mode** — Signal dark palette, theme setting
-6. **Responsive polish + keyboard shortcuts**
+All optional assignment bonuses are implemented (planning notes in
+**`docs/bonus-plan.md`**): attachments, reactions, quoted replies,
+disappearing messages, dark mode, responsive polish + keyboard shortcuts.
 
 ## Assumptions
 
@@ -182,8 +187,7 @@ The optional assignment bonuses are planned in **`docs/bonus-plan.md`**
 - "Online" is derived from active SSE connections; `last_seen_at` updates when
   the user's last session disconnects.
 - Voice/video calls, stories, and linked devices are "Coming Soon" placeholders.
-- Message attachments, reactions, reply-quote, disappearing messages and dark
-  mode are future/bonus work (see `docs/bonus-plan.md`).
+- Attachment storage is local disk on the server (`/data/uploads` volume).
 
 ## Credits
 

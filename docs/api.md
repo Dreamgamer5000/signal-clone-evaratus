@@ -54,6 +54,28 @@ The fixed demo OTP is `123456`.
 | POST | `/conversations/{id}/receipts` | `{message_ids[], status: delivered\|read}` — only others' messages; `read` also advances the read cursor |
 | POST | `/conversations/{id}/typing` | `{active: bool}` |
 
+## Attachments, reactions, replies
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/conversations/{id}/messages` (multipart) | `client_id`, optional `body`, optional `file` — images/video/audio/pdf/text/zip, ≤ 10 MiB, else 415/413 |
+| GET | `/attachments/{id}/file` | streams the file; conversation members only |
+| POST | `/conversations/{id}/messages/{mid}/reactions` | `{emoji}` (allow-listed), idempotent upsert → `ReactionOut {emoji, user_ids}` |
+| DELETE | `/conversations/{id}/messages/{mid}/reactions/{emoji}` | 204, idempotent |
+
+Messages carry `attachments: [AttachmentOut]`, `reactions: [ReactionOut]` and
+`reply_to: ReplyPreview | null` (`{message_id, sender_name, body, deleted}` —
+a snapshot that survives deletion of the original). Sending with
+`reply_to_id` quotes another message in the same conversation (404 otherwise).
+
+## Disappearing messages
+
+`PATCH /conversations/{id}` accepts `disappearing_seconds` ∈
+`30|300|3600|86400|604800` or `null` (off) — any member may change it; a
+system message announces the change. The server sweeps expired messages
+every 60 s (conversation-wide, cascades to receipts) and streams
+`conversation.updated` for affected threads.
+
 ## Group membership (admin only)
 
 | Method | Path | Notes |
@@ -90,7 +112,8 @@ data: {"type": "message.new", "payload": { ...message... }}
 Multi-session: every event is delivered to **all** sessions of each recipient
 (e.g. the same account open in two tabs both receive `message.new`, and
 `message.status` receipts sync across the sender's sessions too).
-| `conversation.updated` | `{conversation_id, reason}` | membership/title changed |
+| `conversation.updated` | `{conversation_id, reason}` | membership/title/timer changed (`members`/`settings`/`ephemeral`) |
+| `reaction.updated` | `{conversation_id, message_id, emoji, user_ids}` | reactions toggled |
 
 ## Message status state machine
 
