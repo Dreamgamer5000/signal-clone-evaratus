@@ -216,21 +216,22 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     try {
       const saved = await sendMessage(conversationId, clientId, body);
-      const s = store.getState();
-      // drop the optimistic row, insert the persisted one
-      const list = (s.messages[conversationId] ?? []).filter(
-        (m) => m.message_id !== optimistic.message_id,
-      );
-      s.applyMessageNew(saved);
-      useAppStore.setState({
-        messages: {
-          ...s.messages,
-          [conversationId]: [...list, saved].sort((a, b) =>
-            a.created_at === b.created_at
-              ? a.message_id - b.message_id
-              : a.created_at - b.created_at,
-          ),
-        },
+      // Reconcile by client_id: the optimistic row and any SSE-echoed copy of
+      // this message share the same client_id, so drop them all and keep one.
+      useAppStore.setState((s) => {
+        const list = (s.messages[conversationId] ?? []).filter(
+          (m) => m.client_id !== clientId,
+        );
+        return {
+          messages: {
+            ...s.messages,
+            [conversationId]: [...list, saved].sort((a, b) =>
+              a.created_at === b.created_at
+                ? a.message_id - b.message_id
+                : a.created_at - b.created_at,
+            ),
+          },
+        };
       });
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch {

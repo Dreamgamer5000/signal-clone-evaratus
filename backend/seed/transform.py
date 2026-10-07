@@ -42,7 +42,7 @@ AVATAR_KEYS = [
 
 RNG_SEED = 12345
 DAY_MS = 24 * 60 * 60 * 1000
-NOW_MS = int(datetime(2026, 10, 7, 12, 0, tzinfo=timezone.utc).timestamp() * 1000)
+NOW_MS = int(datetime(2026, 10, 7, 4, 0, tzinfo=timezone.utc).timestamp() * 1000)
 DEMO_CREATED_MS = int(datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc).timestamp() * 1000)
 DEMO_PHONE = "+15550000001"
 DEMO_AVATAR = "A120"
