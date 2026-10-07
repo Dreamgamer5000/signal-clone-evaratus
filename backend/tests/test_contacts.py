@@ -11,10 +11,10 @@ def register(c, phone, username):
 def test_contacts_crud_and_search(test_engine):
     app = create_app()
     alice = TestClient(app)
-    register(alice, "+100", "alice")
+    register(alice, "+15550000100", "alice")
     # second user in the same app instance
     bob = TestClient(app)
-    register(bob, "+200", "bob")
+    register(bob, "+15550000200", "bob")
 
     r = alice.post("/api/contacts", json={"phone_or_username": "bob"})
     assert r.status_code == 200
@@ -33,6 +33,6 @@ def test_contacts_crud_and_search(test_engine):
 
 def test_patch_me(test_engine):
     c = TestClient(create_app())
-    register(c, "+300", "carol")
+    register(c, "+15550000300", "carol")
     r = c.patch("/api/users/me", json={"display_name": "Carol A.", "about": "hi"})
     assert r.json()["display_name"] == "Carol A."

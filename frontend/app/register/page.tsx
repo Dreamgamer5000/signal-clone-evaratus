@@ -60,7 +60,7 @@ function RegisterForm() {
           type="text"
           required
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value.toLowerCase())}
           className="w-full px-4 py-3 rounded-lg border border-gray-20 text-gray-90 focus:outline-none focus:border-ultramarine focus:ring-2 focus:ring-ultramarine/20"
         />
       </div>

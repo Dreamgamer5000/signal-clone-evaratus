@@ -4,6 +4,15 @@ Base path `/api`. JSON in/out. All endpoints cookie-authenticated
 (`sig_session`, HttpOnly) except the auth endpoints. Errors:
 `{"detail": "..."}` with 4xx/5xx.
 
+Input is validated at the schema boundary (422 on violation): phone numbers
+normalize to `+1` + 10 digits (accepts `5550000001`, `15550000001`,
+`+1 555-000-0001`), usernames are 3–32 chars `[a-z0-9._-]` starting/ending
+alphanumeric (lowercased), display names 1–80 chars, message bodies 1–4000,
+OTP codes exactly 6 digits, avatar colors restricted to the Signal palette,
+all ids are positive integers, and `user_ids`/`message_ids` are 1–256-entry
+lists of positive integers. Group titles and settings keys/values are
+length- and pattern-checked.
+
 ## Auth (mocked OTP)
 
 | Method | Path | Body | Response |

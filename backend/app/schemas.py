@@ -1,6 +1,30 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, RootModel
+from pydantic import AfterValidator, BaseModel, Field, RootModel, model_validator
+
+from app.core.validators import (
+    AVATAR_COLORS,
+    OTP_RE,
+    SETTINGS_KEY_RE,
+    about_text,
+    normalize_phone,
+    trimmed,
+    trimmed_optional,
+    validate_client_id,
+    validate_username,
+)
+
+Phone = Annotated[str, AfterValidator(normalize_phone)]
+Username = Annotated[str, AfterValidator(validate_username)]
+ClientId = Annotated[str, AfterValidator(validate_client_id)]
+DisplayName = Annotated[str, AfterValidator(trimmed(1, 80))]
+Nickname = Annotated[str | None, AfterValidator(trimmed_optional(80))]
+About = Annotated[str | None, AfterValidator(about_text)]
+AvatarColor = Literal[*AVATAR_COLORS]
+OtpCode = Annotated[str, Field(pattern=OTP_RE.pattern)]
+MessageBody = Annotated[str, AfterValidator(trimmed(1, 4000))]
+PositiveId = Annotated[int, Field(ge=1)]
+IdList = Annotated[list[PositiveId], Field(min_length=1, max_length=256)]
 
 
 class UserOut(BaseModel):
@@ -18,30 +42,31 @@ class UserOut(BaseModel):
 
 
 class OtpStartIn(BaseModel):
-    phone_number: str
+    phone_number: Phone
 
 
 class OtpVerifyIn(BaseModel):
-    phone_number: str
-    code: str
+    phone_number: Phone
+    code: OtpCode
 
 
 class RegisterIn(BaseModel):
-    phone_number: str
-    username: str
-    display_name: str
-    avatar_color: str = "A100"
+    phone_number: Phone
+    username: Username
+    display_name: DisplayName
+    about: About = None
+    avatar_color: AvatarColor = "A100"
 
 
 class UserPatchIn(BaseModel):
-    display_name: str | None = None
-    about: str | None = None
-    avatar_color: str | None = None
+    display_name: DisplayName | None = None
+    about: About = None
+    avatar_color: AvatarColor | None = None
 
 
 class ContactIn(BaseModel):
-    phone_or_username: str
-    nickname: str | None = None
+    phone_or_username: Annotated[str, Field(min_length=1, max_length=80)]
+    nickname: Nickname = None
 
 
 class ContactOut(BaseModel):
@@ -56,8 +81,8 @@ class ContactOut(BaseModel):
 
 
 class MessageIn(BaseModel):
-    client_id: str
-    body: str
+    client_id: ClientId
+    body: MessageBody
 
 
 class MessageOut(BaseModel):
@@ -73,7 +98,7 @@ class MessageOut(BaseModel):
 
 
 class ReceiptIn(BaseModel):
-    message_ids: list[int]
+    message_ids: Annotated[list[PositiveId], Field(min_length=1, max_length=256)]
     status: Literal["delivered", "read"]
 
 
@@ -90,6 +115,10 @@ class MemberOut(BaseModel):
     about: str | None
     avatar_color: str
     last_seen_at: int | None
+
+
+class MemberRoleIn(BaseModel):
+    role: Literal["admin", "member"]
 
 
 class ConversationSummary(BaseModel):
@@ -122,21 +151,30 @@ class ConversationOut(BaseModel):
 
 
 class DirectIn(BaseModel):
-    user_id: int
+    user_id: PositiveId
 
 
 class GroupIn(BaseModel):
-    title: str
-    user_ids: list[int]
+    title: DisplayName
+    user_ids: IdList
 
 
 class ConversationPatchIn(BaseModel):
-    title: str | None = None
+    title: DisplayName | None = None
     is_pinned: bool | None = None
     is_archived: bool | None = None
     is_muted: bool | None = None
 
 
 class SettingsPatchIn(RootModel[dict[str, str | int | float | bool]]):
+    @model_validator(mode="after")
+    def _validate(self) -> "SettingsPatchIn":
+        for key, value in self.root.items():
+            if not SETTINGS_KEY_RE.fullmatch(key):
+                raise ValueError(f"invalid settings key: {key!r}")
+            if len(str(value)) > 200:
+                raise ValueError(f"settings value too long: {key!r}")
+        return self
+
     def as_str_map(self) -> dict[str, str]:
         return {key: str(value) for key, value in self.root.items()}

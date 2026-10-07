@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import random
+import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +14,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app import models  # noqa: F401
 from app.core.db import Base
+from app.core.validators import normalize_phone
 from app.models import (
     Contact,
     Conversation,
@@ -97,20 +99,51 @@ def _reset_file(out_path: str) -> None:
             candidate.unlink()
 
 
+def _slug_username(raw: str, uid: int, seen: set[str]) -> str:
+    """Sample usernames are multi-word; slugify to API-legal [a-z0-9._-], 3-32 chars."""
+    slug = re.sub(r"[^a-z0-9._-]+", ".", (raw or "").lower())
+    slug = re.sub(r"[._-]{2,}", ".", slug).strip(".-_")
+    if not slug or not slug[0].isalnum():
+        slug = f"u{slug}"
+    if len(slug) < 3:
+        slug = f"{slug}{uid}"
+    slug = slug[:32]
+    candidate, n = slug, 2
+    while candidate in seen:
+        suffix = f".{n}"
+        candidate = f"{slug[: 32 - len(suffix)]}{suffix}"
+        n += 1
+    seen.add(candidate)
+    return candidate
+
+
+def _unique_phone(original: str, uid: int, seen: set[str]) -> str:
+    phone = normalize_phone(original)
+    if phone not in seen:
+        seen.add(phone)
+        return phone
+    # duplicate sample rows: synthesize a unique, still-valid US number
+    candidate = f"+1{9000000000 + uid}"
+    while candidate in seen:
+        candidate = f"+1{9000000000 + uid + len(seen)}"
+    seen.add(candidate)
+    return candidate
+
+
 def _seed_sample(db, sample: sqlite3.Connection, rng: random.Random):
     users: dict[int, User] = {}
     seen_phones: set[str] = set()
+    seen_usernames: set[str] = set()
     for row in sample.execute(
         "SELECT user_id, created_at, phone_number, username FROM users ORDER BY user_id"
     ):
         uid = row["user_id"]
-        original = row["phone_number"]
-        phone = original if original not in seen_phones else f"{original}-{uid}"
-        seen_phones.add(original)
+        phone = _unique_phone(row["phone_number"], uid, seen_phones)
+        username = _slug_username(row["username"], uid, seen_usernames)
         user = User(
             user_id=uid,
             phone_number=phone,
-            username=row["username"],
+            username=username,
             display_name=row["username"].title(),
             about=None,
             avatar_color=_avatar_for(uid),

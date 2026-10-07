@@ -1,8 +1,8 @@
 import secrets
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Response, Path
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 class MemberAddIn(BaseModel):
-    user_id: int
+    user_id: int = Field(ge=1)
 
 
 class MemberRoleIn(BaseModel):
@@ -111,7 +111,7 @@ def _publish(db: Session, conversation_id: int, actor: User, msg: Message) -> No
 
 @router.post("/{conversation_id}/members", response_model=MemberOut)
 def add_member(
-    conversation_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
     payload: MemberAddIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -143,8 +143,8 @@ def add_member(
 
 @router.delete("/{conversation_id}/members/{user_id}", status_code=204)
 def remove_member(
-    conversation_id: int,
-    user_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
+    user_id: Annotated[int, Path(ge=1)],
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -171,8 +171,8 @@ def remove_member(
 
 @router.patch("/{conversation_id}/members/{user_id}", response_model=MemberOut)
 def set_member_role(
-    conversation_id: int,
-    user_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
+    user_id: Annotated[int, Path(ge=1)],
     payload: MemberRoleIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

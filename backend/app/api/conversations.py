@@ -1,6 +1,7 @@
+from typing import Annotated
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -230,7 +231,7 @@ def create_group(
 
 @router.get("/{conversation_id}")
 def get_conversation(
-    conversation_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ConversationDetail:
@@ -244,7 +245,7 @@ def get_conversation(
 
 @router.get("/{conversation_id}/members")
 def list_members(
-    conversation_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[MemberOut]:
@@ -254,7 +255,7 @@ def list_members(
 
 @router.patch("/{conversation_id}")
 def patch_conversation(
-    conversation_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
     payload: ConversationPatchIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

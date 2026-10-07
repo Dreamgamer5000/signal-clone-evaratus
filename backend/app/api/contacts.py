@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException, Response, Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.security import get_current_user, now_ms
+from app.core.validators import normalize_phone
 from app.models import Contact, User
 from app.schemas import ContactIn, ContactOut, UserOut
 
@@ -41,9 +43,14 @@ def add_contact(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ContactOut:
-    target = db.scalar(select(User).where(User.phone_number == payload.phone_or_username))
+    query = payload.phone_or_username.strip()
+    try:
+        query = normalize_phone(query)
+    except ValueError:
+        query = query.lower()
+    target = db.scalar(select(User).where(User.phone_number == query))
     if target is None:
-        target = db.scalar(select(User).where(User.username == payload.phone_or_username))
+        target = db.scalar(select(User).where(User.username == query))
     if target is None:
         raise HTTPException(404, "user not found")
     if target.user_id == user.user_id:
@@ -69,7 +76,7 @@ def add_contact(
 
 @router.delete("/{contact_id}", status_code=204)
 def delete_contact(
-    contact_id: int,
+    contact_id: Annotated[int, Path(ge=1)],
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:

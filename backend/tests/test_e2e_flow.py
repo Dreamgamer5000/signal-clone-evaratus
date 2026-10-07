@@ -40,7 +40,7 @@ def test_full_conversation_flow(test_engine, tmp_path):
 
     with httpx.Client(base_url="http://127.0.0.1:8766", timeout=10) as a, \
          httpx.Client(base_url="http://127.0.0.1:8766", timeout=10) as b:
-        for c, ph, un in ((a, "+1", "alice"), (b, "+2", "bob")):
+        for c, ph, un in ((a, "+15550000001", "alice"), (b, "+15550000002", "bob")):
             r = c.post("/api/auth/register", json={
                 "phone_number": ph, "username": un,
                 "display_name": un.title(), "avatar_color": "A100"})
@@ -55,7 +55,7 @@ def test_full_conversation_flow(test_engine, tmp_path):
         time.sleep(0.5)
         a.post(f"/api/conversations/{cid}/typing", json={"active": True})
         m = a.post(f"/api/conversations/{cid}/messages",
-                   json={"client_id": "e2e", "body": "hey"}).json()
+                   json={"client_id": "cid-e2e-0001", "body": "hey"}).json()
         b.post(f"/api/conversations/{cid}/receipts",
                json={"message_ids": [m["message_id"]], "status": "delivered"})
         b.post(f"/api/conversations/{cid}/receipts",

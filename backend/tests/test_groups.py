@@ -5,7 +5,7 @@ from app.main import create_app
 def boot(test_engine):
     app = create_app()
     clients = {}
-    for ph, un in (("+1", "alice"), ("+2", "bob"), ("+3", "carol")):
+    for ph, un in (("+15550000001", "alice"), ("+15550000002", "bob"), ("+15550000003", "carol")):
         c = TestClient(app)
         c.post("/api/auth/register", json={
             "phone_number": ph, "username": un,

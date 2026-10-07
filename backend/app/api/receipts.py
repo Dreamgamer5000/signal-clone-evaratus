@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException, Response, Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -25,7 +26,7 @@ def _others(db: Session, conversation_id: int, me_id: int) -> list[int]:
 
 @router.post("/{conversation_id}/receipts", status_code=204)
 def post_receipts(
-    conversation_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
     payload: ReceiptIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -73,7 +74,7 @@ def post_receipts(
 
 @router.post("/{conversation_id}/typing", status_code=204)
 def post_typing(
-    conversation_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
     payload: TypingIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -52,7 +53,7 @@ def _receipts_for(
 
 @router.post("/{conversation_id}/messages", response_model=MessageOut)
 def send_message(
-    conversation_id: int,
+    conversation_id: Annotated[int, Path(ge=1)],
     payload: MessageIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -97,8 +98,8 @@ def send_message(
 
 @router.get("/{conversation_id}/messages", response_model=list[MessageOut])
 def list_messages(
-    conversation_id: int,
-    before_id: int | None = None,
+    conversation_id: Annotated[int, Path(ge=1)],
+    before_id: int | None = Query(None, ge=1),
     limit: int = Query(50, ge=1, le=100),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

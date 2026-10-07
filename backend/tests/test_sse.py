@@ -18,7 +18,7 @@ def test_sse_delivers_events_to_right_users(test_engine, tmp_path):
 
     with httpx.Client(base_url="http://127.0.0.1:8765", timeout=10) as a, \
          httpx.Client(base_url="http://127.0.0.1:8765", timeout=10) as b:
-        for c, ph, un in ((a, "+1", "alice"), (b, "+2", "bob")):
+        for c, ph, un in ((a, "+15550000001", "alice"), (b, "+15550000002", "bob")):
             r = c.post("/api/auth/register", json={
                 "phone_number": ph, "username": un,
                 "display_name": un.title(), "avatar_color": "A100"})
@@ -40,7 +40,7 @@ def test_sse_delivers_events_to_right_users(test_engine, tmp_path):
         t2.start()
         time.sleep(0.5)
         a.post(f"/api/conversations/{cid}/messages",
-               json={"client_id": "s-1", "body": "hello from alice"})
+               json={"client_id": "cid-sse-0001", "body": "hello from alice"})
         t2.join(timeout=10)
 
     assert received and received[0]["type"] == "message.new"

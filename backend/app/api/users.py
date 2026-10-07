@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.get("")
 def search_users(
-    q: str = "",
+    q: str = Query("", max_length=100),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[UserOut]:
