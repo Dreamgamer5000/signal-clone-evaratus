@@ -1,14 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { fetchMe } from '@/lib/auth';
+import { getConversations } from '@/lib/api';
+import { connectSSE } from '@/lib/sse';
 import { useAppStore } from '@/lib/store';
+import { ConversationList } from '@/components/ConversationList';
 
-export default function ChatsLayout({ children }: { children: React.ReactNode }) {
+function ChatShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const setMe = useAppStore((s) => s.setMe);
+  const pathname = usePathname();
   const [ready, setReady] = useState(false);
+  const store = useAppStore;
+  const connectedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -18,13 +23,55 @@ export default function ChatsLayout({ children }: { children: React.ReactNode })
         router.replace('/login');
         return;
       }
-      setMe(user);
+      store.getState().setMe(user);
       setReady(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [router, setMe]);
+  }, [router, store]);
+
+  useEffect(() => {
+    if (!ready || connectedRef.current) return;
+    connectedRef.current = true;
+
+    getConversations()
+      .then((list) => store.getState().setConversations(list))
+      .catch(() => {});
+
+    const stop = connectSSE({
+      onOpen: () => {
+        getConversations()
+          .then((list) => store.getState().setConversations(list))
+          .catch(() => {});
+        store.getState().bumpSseEpoch();
+      },
+      onMessageNew: (message) => {
+        const s = store.getState();
+        const isMine = s.me != null && message.sender_id === s.me.user_id;
+        const threadOpen = s.activeConversationId === message.conversation_id;
+        s.applyMessageNew(message);
+        if (!isMine && !threadOpen) {
+          const name = s.userNames[message.sender_id] ?? 'Someone';
+          s.pushToast(`New message from ${name}`);
+        }
+      },
+      onMessageStatus: (payload) => store.getState().applyMessageStatus(payload),
+      onTyping: (payload) => store.getState().applyTyping(payload),
+      onPresence: (payload) => store.getState().applyPresence(payload),
+      onConversationUpdated: () => {
+        getConversations()
+          .then((list) => store.getState().setConversations(list))
+          .catch(() => {});
+      },
+    });
+    return () => {
+      stop();
+      connectedRef.current = false;
+    };
+  }, [ready, store]);
+
+  const chatOpen = /^\/chats\/\d+/.test(pathname ?? '');
 
   if (!ready) {
     return (
@@ -33,5 +80,23 @@ export default function ChatsLayout({ children }: { children: React.ReactNode })
       </div>
     );
   }
-  return <>{children}</>;
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-white">
+      <aside
+        className={`${chatOpen ? 'hidden md:flex' : 'flex'} w-full md:w-[380px] shrink-0 border-r border-gray-15 flex-col`}
+      >
+        <ConversationList
+          onNewChat={() => useAppStore.getState().pushToast('New chat — coming soon')}
+        />
+      </aside>
+      <main className={`${chatOpen ? 'flex' : 'hidden md:flex'} flex-1 min-w-0`}>
+        {children}
+      </main>
+    </div>
+  );
+}
+
+export default function ChatsLayout({ children }: { children: React.ReactNode }) {
+  return <ChatShell>{children}</ChatShell>;
 }

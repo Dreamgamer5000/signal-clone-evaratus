@@ -18,9 +18,15 @@ interface AppState {
   conversations: ConversationSummary[];
   setConversations: (conversations: ConversationSummary[]) => void;
 
+  userNames: Record<number, string>;
+  rememberUsers: (users: { user_id: number; display_name: string }[]) => void;
+
   messages: Record<number, Message[]>;
   typing: Record<number, number[]>;
   presence: Record<number, boolean>;
+
+  sseEpoch: number;
+  bumpSseEpoch: () => void;
 
   activeConversationId: number | null;
   openConversation: (id: number) => void;
@@ -57,9 +63,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   conversations: [],
   setConversations: (conversations) => set({ conversations }),
 
+  userNames: {},
+  rememberUsers: (users) =>
+    set((s) => {
+      const next = { ...s.userNames };
+      let changed = false;
+      for (const u of users) {
+        if (next[u.user_id] !== u.display_name) {
+          next[u.user_id] = u.display_name;
+          changed = true;
+        }
+      }
+      return changed ? { userNames: next } : s;
+    }),
+
   messages: {},
   typing: {},
   presence: {},
+
+  sseEpoch: 0,
+  bumpSseEpoch: () => set((s) => ({ sseEpoch: s.sseEpoch + 1 })),
 
   activeConversationId: null,
   openConversation: (id) => set({ activeConversationId: id }),

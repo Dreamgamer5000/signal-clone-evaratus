@@ -31,6 +31,7 @@ export interface Message {
   kind: MessageKind;
   created_at: number;
   status: MessageStatus;
+  sender_name?: string | null;
 }
 
 export interface ConversationSummary {

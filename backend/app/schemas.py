@@ -69,6 +69,7 @@ class MessageOut(BaseModel):
     kind: str
     created_at: int
     status: str = "sent"
+    sender_name: str | None = None
 
 
 class ReceiptIn(BaseModel):

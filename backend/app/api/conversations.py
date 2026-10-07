@@ -30,6 +30,7 @@ def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
             select(MessageReceipt).where(MessageReceipt.message_id == m.message_id)
         ).all()
     )
+    sender = db.get(User, m.sender_id)
     return MessageOut(
         message_id=m.message_id,
         conversation_id=m.conversation_id,
@@ -39,6 +40,7 @@ def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
         kind=m.kind,
         created_at=m.created_at,
         status=derive_status(receipts, viewer_id),
+        sender_name=sender.display_name if sender is not None else None,
     )
 
 

@@ -22,7 +22,7 @@ def _require_membership(
         raise HTTPException(403, "not a member")
 
 
-def _message_out(m: Message, status: str) -> MessageOut:
+def _message_out(m: Message, status: str, sender_name: str | None = None) -> MessageOut:
     return MessageOut(
         message_id=m.message_id,
         conversation_id=m.conversation_id,
@@ -32,6 +32,7 @@ def _message_out(m: Message, status: str) -> MessageOut:
         kind=m.kind,
         created_at=m.created_at,
         status=status,
+        sender_name=sender_name,
     )
 
 
@@ -65,6 +66,7 @@ def send_message(
             Message.client_id == payload.client_id,
         )
     )
+    sender = db.get(User, user.user_id)
     if existing is not None:
         receipts = list(
             db.scalars(
@@ -73,7 +75,9 @@ def send_message(
                 )
             ).all()
         )
-        return _message_out(existing, derive_status(receipts, user.user_id))
+        return _message_out(
+            existing, derive_status(receipts, user.user_id), sender.display_name
+        )
     msg = Message(
         conversation_id=conversation_id,
         sender_id=user.user_id,
@@ -86,7 +90,7 @@ def send_message(
     db.flush()
     add_receipt_rows(db, msg)
     db.commit()
-    out = _message_out(msg, "sent")
+    out = _message_out(msg, "sent", sender.display_name)
     broker.publish(member_ids(db, conversation_id), "message.new", out.model_dump())
     return out
 
@@ -110,7 +114,15 @@ def list_messages(
         ).all()
     )[::-1]
     receipts = _receipts_for(db, [m.message_id for m in rows])
+    sender_names = {
+        u.user_id: u.display_name
+        for u in db.scalars(select(User).where(User.user_id.in_({m.sender_id for m in rows})))
+    }
     return [
-        _message_out(m, derive_status(receipts.get(m.message_id, []), user.user_id))
+        _message_out(
+            m,
+            derive_status(receipts.get(m.message_id, []), user.user_id),
+            sender_names.get(m.sender_id),
+        )
         for m in rows
     ]
