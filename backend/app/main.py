@@ -6,6 +6,7 @@ from app.api.events import router as events_router
 from app.api.members import router as members_router
 from app.api.messages import router as messages_router
 from app.api.receipts import router as receipts_router
+from app.api.settings import router as settings_router
 from app.api.users import router as users_router
 from app.core.db import init_db
 
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(messages_router, prefix="/api/conversations", tags=["messages"])
     app.include_router(receipts_router, prefix="/api/conversations", tags=["receipts"])
     app.include_router(events_router, prefix="/api", tags=["events"])
+    app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
     return app
 
 

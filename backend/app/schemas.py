@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class UserOut(BaseModel):
@@ -135,3 +135,8 @@ class ConversationPatchIn(BaseModel):
     is_pinned: bool | None = None
     is_archived: bool | None = None
     is_muted: bool | None = None
+
+
+class SettingsPatchIn(RootModel[dict[str, str | int | float | bool]]):
+    def as_str_map(self) -> dict[str, str]:
+        return {key: str(value) for key, value in self.root.items()}
