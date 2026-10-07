@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@source "../app";
+@source "../components";
+@source "../lib";
+
 @theme {
   --color-ultramarine: #2c6bed;
   --color-ultramarine-dark: #1851b4;
