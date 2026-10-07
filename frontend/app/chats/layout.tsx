@@ -64,6 +64,7 @@ function ChatShell({ children }: { children: React.ReactNode }) {
         }
       },
       onMessageStatus: (payload) => store.getState().applyMessageStatus(payload),
+      onReaction: (payload) => store.getState().applyReaction(payload),
       onTyping: (payload) => store.getState().applyTyping(payload),
       onPresence: (payload) => store.getState().applyPresence(payload),
       onConversationUpdated: refreshConversations,

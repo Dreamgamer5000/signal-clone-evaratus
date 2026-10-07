@@ -22,6 +22,11 @@ export interface Contact {
 export type MessageKind = 'text' | 'system';
 export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read';
 
+export interface Reaction {
+  emoji: string;
+  user_ids: number[];
+}
+
 export interface Attachment {
   attachment_id: number;
   file_name: string;
@@ -40,6 +45,7 @@ export interface Message {
   status: MessageStatus;
   sender_name?: string | null;
   attachments?: Attachment[];
+  reactions?: Reaction[];
 }
 
 export interface ConversationSummary {

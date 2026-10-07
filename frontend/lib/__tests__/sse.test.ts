@@ -28,6 +28,7 @@ it('parses envelope and reconnects on error', async () => {
   const onOpen = vi.fn()
   const stop = connectSSE({
     onMessageNew: (p) => seen.push(p),
+    onReaction: () => {},
     onMessageStatus: () => {},
     onTyping: () => {},
     onPresence: () => {},

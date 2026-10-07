@@ -286,6 +286,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
           tick={isMine ? tickState(m, me.user_id) : null}
           me={me}
           userNames={userNames}
+          conversationId={conversationId}
         />,
       );
       if (!sameRun) nodes.push(<div key={`gap-${m.message_id}`} className="h-1" />);

@@ -2,6 +2,8 @@
 
 import { MessageStatusTick } from './MessageStatusTick';
 import type { Message, User, Attachment } from '@/lib/types';
+import { addReaction, removeReaction } from '@/lib/api';
+import { useAppStore } from '@/lib/store';
 import type { TickState } from '@/lib/status';
 import { formatBubbleTime } from '@/lib/time';
 
@@ -12,6 +14,65 @@ interface MessageBubbleProps {
   tick: TickState;
   me: User | null;
   userNames: Record<number, string>;
+  conversationId: number;
+}
+
+const QUICK_EMOJI = ['👍', '❤️', '😂', '😮', '😢', '😡'];
+
+function ReactionChips({
+  message,
+  conversationId,
+  me,
+}: {
+  message: Message;
+  conversationId: number;
+  me: User | null;
+}) {
+  const reactions = message.reactions ?? [];
+  if (reactions.length === 0) return null;
+
+  function toggle(emoji: string, mine: boolean) {
+    if (!me) return;
+    const call = mine
+      ? removeReaction(conversationId, message.message_id, emoji)
+      : addReaction(conversationId, message.message_id, emoji);
+    call.then((res) => {
+      const user_ids =
+        res && 'user_ids' in (res as object)
+          ? (res as { user_ids: number[] }).user_ids
+          : (message.reactions ?? [])
+              .find((r) => r.emoji === emoji)
+              ?.user_ids.filter((u) => u !== me.user_id) ?? [];
+      useAppStore.getState().applyReaction({
+        conversation_id: conversationId,
+        message_id: message.message_id,
+        emoji,
+        user_ids,
+      });
+    }).catch(() => {});
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {reactions.map((r) => {
+        const mine = me != null && r.user_ids.includes(me.user_id);
+        return (
+          <button
+            key={r.emoji}
+            type="button"
+            onClick={() => toggle(r.emoji, mine)}
+            title={r.user_ids.length.toString()}
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs border transition-colors ${
+              mine ? 'border-ultramarine bg-ultramarine/10' : 'border-gray-15 bg-gray-02'
+            }`}
+          >
+            <span>{r.emoji}</span>
+            <span className="text-gray-60">{r.user_ids.length}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function formatSize(bytes: number): string {
@@ -68,6 +129,7 @@ export function MessageBubble({
   tick,
   me,
   userNames,
+  conversationId,
 }: MessageBubbleProps) {
   if (message.kind === 'system') {
     return (
@@ -85,9 +147,9 @@ export function MessageBubble({
       : null;
 
   return (
-    <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} px-4`}>
+    <div className={`group flex ${isMine ? 'justify-end' : 'justify-start'} px-4`}>
       <div
-        className={`max-w-[65%] px-3 py-2 text-[15px] leading-relaxed ${
+        className={`relative max-w-[65%] px-3 py-2 text-[15px] leading-relaxed ${
           isMine
             ? `bg-ultramarine text-white ${showTail ? 'rounded-2xl rounded-br-md' : 'rounded-2xl'}`
             : `bg-gray-05 text-gray-90 ${showTail ? 'rounded-2xl rounded-bl-md' : 'rounded-2xl'}`
@@ -104,6 +166,7 @@ export function MessageBubble({
         {message.body && (
           <span className="whitespace-pre-wrap break-words">{message.body}</span>
         )}
+        <ReactionChips message={message} conversationId={conversationId} me={me} />
         <span
           className={`inline-flex items-center gap-1 ml-2 align-bottom text-[10px] ${
             isMine ? 'text-white/70' : 'text-gray-45'
@@ -112,6 +175,35 @@ export function MessageBubble({
           {formatBubbleTime(message.created_at)}
           {isMine && <MessageStatusTick state={tick} />}
         </span>
+      </div>
+      <div
+        className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-surface border border-gray-15 rounded-full px-1 py-0.5 shadow-sm z-10 ${
+          isMine ? 'left-0 -translate-x-full mr-2' : 'right-0 translate-x-full ml-2'
+        }`}
+      >
+        {QUICK_EMOJI.map((e) => (
+          <button
+            key={e}
+            type="button"
+            aria-label={`React ${e}`}
+            onClick={() => {
+              if (!me) return;
+              addReaction(conversationId, message.message_id, e)
+                .then((res) => {
+                  useAppStore.getState().applyReaction({
+                    conversation_id: conversationId,
+                    message_id: message.message_id,
+                    emoji: e,
+                    user_ids: res.user_ids,
+                  });
+                })
+                .catch(() => {});
+            }}
+            className="w-7 h-7 rounded-full hover:bg-gray-04 text-sm flex items-center justify-center"
+          >
+            {e}
+          </button>
+        ))}
       </div>
     </div>
   );

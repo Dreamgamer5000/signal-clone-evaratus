@@ -210,3 +210,23 @@ export function sendMessageWithFile(
 }
 
 type FormMessage = Message;
+
+export function addReaction(
+  conversationId: number,
+  messageId: number,
+  emoji: string,
+): Promise<{ emoji: string; user_ids: number[] }> {
+  return apiPost(`/api/conversations/${conversationId}/messages/${messageId}/reactions`, {
+    emoji,
+  });
+}
+
+export function removeReaction(
+  conversationId: number,
+  messageId: number,
+  emoji: string,
+): Promise<void> {
+  return apiDelete(
+    `/api/conversations/${conversationId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+  );
+}

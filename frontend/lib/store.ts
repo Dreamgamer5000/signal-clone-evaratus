@@ -54,6 +54,13 @@ interface AppState {
     last_seen_at: number | null;
   }) => void;
   markRead: (conversationId: number, messageIds: number[]) => void;
+
+  applyReaction: (payload: {
+    conversation_id: number;
+    message_id: number;
+    emoji: string;
+    user_ids: number[];
+  }) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -178,6 +185,28 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   applyPresence: (payload) =>
     set((s) => ({ presence: { ...s.presence, [payload.user_id]: payload.online } })),
+
+  applyReaction: (payload) =>
+    set((s) => {
+      const list = s.messages[payload.conversation_id];
+      if (!list) return s;
+      return {
+        messages: {
+          ...s.messages,
+          [payload.conversation_id]: list.map((m) => {
+            if (m.message_id !== payload.message_id) return m;
+            const others = (m.reactions ?? []).filter((r) => r.emoji !== payload.emoji);
+            return {
+              ...m,
+              reactions:
+                payload.user_ids.length > 0
+                  ? [...others, { emoji: payload.emoji, user_ids: payload.user_ids }]
+                  : others,
+            };
+          }),
+        },
+      };
+    }),
 
   markRead: (conversationId, messageIds) =>
     set((s) => ({

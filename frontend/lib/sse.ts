@@ -8,6 +8,12 @@ import type {
 
 export interface SseHandlers {
   onMessageNew: (payload: SseMessageNew['payload']) => void;
+  onReaction: (payload: {
+    conversation_id: number;
+    message_id: number;
+    emoji: string;
+    user_ids: number[];
+  }) => void;
   onMessageStatus: (payload: SseMessageStatus['payload']) => void;
   onTyping: (payload: SseTypingUpdate['payload']) => void;
   onPresence: (payload: SsePresenceUpdate['payload']) => void;
@@ -50,6 +56,9 @@ export function connectSSE(handlers: SseHandlers, options: SseClientOptions = {}
     });
     source.addEventListener('presence.update', (e) => {
       handlers.onPresence(JSON.parse((e as MessageEvent).data).payload);
+    });
+    source.addEventListener('reaction.updated', (e) => {
+      handlers.onReaction(JSON.parse((e as MessageEvent).data).payload);
     });
     source.addEventListener('conversation.updated', (e) => {
       handlers.onConversationUpdated(JSON.parse((e as MessageEvent).data).payload);
