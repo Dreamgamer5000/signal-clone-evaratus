@@ -161,6 +161,7 @@ class ConversationSummary(BaseModel):
     is_pinned: bool
     is_archived: bool
     is_muted: bool
+    disappearing_seconds: int | None = None
 
 
 class ConversationDetail(ConversationSummary):
@@ -175,6 +176,7 @@ class ConversationOut(BaseModel):
     direct_key: str | None
     created_by: int
     created_at: int
+    disappearing_seconds: int | None = None
 
     model_config = {"from_attributes": True}
 
@@ -193,6 +195,7 @@ class ConversationPatchIn(BaseModel):
     is_pinned: bool | None = None
     is_archived: bool | None = None
     is_muted: bool | None = None
+    disappearing_seconds: Literal[30, 300, 3600, 86400, 604800] | None = None
 
 
 class SettingsPatchIn(RootModel[dict[str, str | int | float | bool]]):

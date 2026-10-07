@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.broker import broker
 from app.core.db import get_db
 from app.core.security import get_current_user, now_ms
 from app.models import (
@@ -29,10 +30,18 @@ from app.schemas import (
     ReactionOut,
     UserOut,
 )
-from app.services.conversations import get_or_create_direct
+from app.services.conversations import get_or_create_direct, member_ids
 from app.services.messages import derive_status, reply_preview
 
 router = APIRouter()
+
+DISAPPEARING_LABELS = {
+    30: "30 seconds",
+    300: "5 minutes",
+    3600: "1 hour",
+    86400: "1 day",
+    604800: "1 week",
+}
 
 
 def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
@@ -132,6 +141,7 @@ def _summary(
         is_pinned=bool(member.is_pinned),
         is_archived=bool(member.is_archived),
         is_muted=bool(member.is_muted),
+        disappearing_seconds=conv.disappearing_seconds,
     )
 
 
@@ -167,6 +177,45 @@ def _require_membership(
     if member is None:
         raise HTTPException(403, "not a member")
     return conv, member
+
+
+def _system_message(
+    db: Session, conversation_id: int, actor: User, body: str
+) -> Message:
+    msg = Message(
+        conversation_id=conversation_id,
+        sender_id=actor.user_id,
+        client_id=secrets.token_hex(16),
+        body=body,
+        kind="system",
+        created_at=now_ms(),
+    )
+    db.add(msg)
+    db.flush()
+    return msg
+
+
+def _publish_settings(
+    db: Session, conversation_id: int, actor: User, msg: Message
+) -> None:
+    ids = member_ids(db, conversation_id)
+    broker.publish(
+        ids,
+        "conversation.updated",
+        {"conversation_id": conversation_id, "reason": "settings"},
+    )
+    out = MessageOut(
+        message_id=msg.message_id,
+        conversation_id=msg.conversation_id,
+        sender_id=msg.sender_id,
+        client_id=msg.client_id,
+        body=msg.body,
+        kind=msg.kind,
+        created_at=msg.created_at,
+        status="sent",
+        sender_name=actor.display_name,
+    )
+    broker.publish(ids, "message.new", out.model_dump())
 
 
 @router.get("")
@@ -305,5 +354,20 @@ def patch_conversation(
         member.is_archived = 1 if payload.is_archived else 0
     if payload.is_muted is not None:
         member.is_muted = 1 if payload.is_muted else 0
+    system_msg: Message | None = None
+    if "disappearing_seconds" in payload.model_fields_set:
+        new = payload.disappearing_seconds
+        if new != conv.disappearing_seconds:
+            conv.disappearing_seconds = new
+            if new is None:
+                body = f"{user.display_name} turned off disappearing messages"
+            else:
+                body = (
+                    f"{user.display_name} set disappearing messages to "
+                    f"{DISAPPEARING_LABELS[new]}"
+                )
+            system_msg = _system_message(db, conversation_id, user, body)
     db.commit()
+    if system_msg is not None:
+        _publish_settings(db, conversation_id, user, system_msg)
     return ConversationOut.model_validate(conv)

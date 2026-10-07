@@ -90,9 +90,14 @@ class Conversation(Base):
         Integer, ForeignKey("users.user_id"), nullable=False
     )
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    disappearing_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (
         CheckConstraint("type IN ('direct','group')", name="ck_conversations_type"),
+        CheckConstraint(
+            "disappearing_seconds IS NULL OR disappearing_seconds IN (30,300,3600,86400,604800)",
+            name="ck_conversations_disappearing_seconds",
+        ),
     )
 
 
