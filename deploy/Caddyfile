@@ -1,0 +1,13 @@
+# Merge this block into /home/dream/caddy/Caddyfile on the VM, then:
+#   sudo docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+signal.rejit.in {
+    handle /api/* {
+        reverse_proxy signal-backend:8000 {
+            flush_interval -1
+            header_down X-Accel-Buffering no
+        }
+    }
+    handle {
+        reverse_proxy signal-frontend:3000
+    }
+}

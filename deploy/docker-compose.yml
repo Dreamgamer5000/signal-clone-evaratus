@@ -1,0 +1,32 @@
+services:
+  signal-backend:
+    image: GCP_REGION-docker.pkg.dev/GCP_PROJECT_ID/GCP_REPO_NAME/signal-backend:latest
+    container_name: signal_backend
+    init: true
+    restart: always
+    expose:
+      - "8000"
+    environment:
+      - DATABASE_URL=sqlite:////data/app.db
+      - SSE_HEARTBEAT_SECONDS=20
+    volumes:
+      - signal_data:/data
+    networks:
+      - web_net
+
+  signal-frontend:
+    image: GCP_REGION-docker.pkg.dev/GCP_PROJECT_ID/GCP_REPO_NAME/signal-frontend:latest
+    container_name: signal_frontend
+    init: true
+    restart: always
+    expose:
+      - "3000"
+    networks:
+      - web_net
+
+volumes:
+  signal_data:
+
+networks:
+  web_net:
+    external: true
