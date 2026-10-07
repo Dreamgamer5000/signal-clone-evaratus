@@ -20,6 +20,8 @@ import { dayLabel, formatListTime, isSameDay } from '@/lib/time';
 import type { ConversationSummary, Member, Message } from '@/lib/types';
 
 const PAGE_SIZE = 50;
+const EMPTY_MESSAGES: Message[] = [];
+const EMPTY_IDS: number[] = [];
 
 interface ChatPaneProps {
   conversationId: number;
@@ -29,8 +31,8 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   const router = useRouter();
   const store = useAppStore;
   const me = useAppStore((s) => s.me);
-  const storeMessages = useAppStore((s) => s.messages[conversationId] ?? []);
-  const typingIds = useAppStore((s) => s.typing[conversationId] ?? []);
+  const storeMessages = useAppStore((s) => s.messages[conversationId] ?? EMPTY_MESSAGES);
+  const typingIds = useAppStore((s) => s.typing[conversationId] ?? EMPTY_IDS);
   const presence = useAppStore((s) => s.presence);
   const userNames = useAppStore((s) => s.userNames);
   const sseEpoch = useAppStore((s) => s.sseEpoch);
