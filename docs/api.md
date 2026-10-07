@@ -85,7 +85,11 @@ data: {"type": "message.new", "payload": { ...message... }}
 | `message.new` | message (+`conversation_id`) | new message (also echoed to the sender's other tabs) |
 | `message.status` | `{conversation_id, message_ids, user_id, status}` | delivered/read tick update |
 | `typing.update` | `{conversation_id, user_id, active}` | typing indicator |
-| `presence.update` | `{user_id, online, last_seen_at}` | online/last seen |
+| `presence.update` | `{user_id, online, last_seen_at}` | online/last seen (a user stays online until their **last** session disconnects) |
+
+Multi-session: every event is delivered to **all** sessions of each recipient
+(e.g. the same account open in two tabs both receive `message.new`, and
+`message.status` receipts sync across the sender's sessions too).
 | `conversation.updated` | `{conversation_id, reason}` | membership/title changed |
 
 ## Message status state machine

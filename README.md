@@ -24,6 +24,29 @@ Cloudflare/Caddy, native browser auto-reconnect (no custom resume protocol),
 and the POST response doubles as the message ack. This app does not need the
 bidirectional throughput of a raw socket.
 
+## Features
+
+- **Auth** — phone + mocked OTP (`123456`), profile (display name, about,
+  Signal-palette avatar), real session cookies with logout revocation
+- **Contacts** — find people by phone number or `@username`, one-way contact
+  book (Signal-style: no invites or approvals)
+- **Messaging** — 1:1 and group chats, optimistic send with
+  *sending → sent → delivered → read* ticks, typing indicators, online /
+  last-seen presence
+- **Multi-session** — the same account can be open in several tabs/devices at
+  once: messages fan out to every session, read/delivery state syncs across
+  them, and presence stays online until the **last** session disconnects
+- **Groups** — create with name + members, admin controls (add/remove/promote,
+  last-admin protection), system messages
+- **Signal experience** — conversation list (search, unread pills, pinned,
+  previews), date dividers, toasts, settings shells, "Coming Soon" modals
+  (calls, stories, linked devices)
+- **Input validation** — every request is constrained at the schema boundary
+  (422 with field-level errors): phone numbers normalize to `+1` + 10 digits,
+  usernames 3–32 `[a-z0-9._-]`, display names 1–80 chars, message bodies
+  1–4000, OTP codes exactly 6 digits, avatar colors restricted to the Signal
+  palette, positive integer ids, bounded id lists, settings key/value patterns
+
 ## Architecture
 
 ```
@@ -37,22 +60,22 @@ signal-clone-evaratus/
 │   ├── app/
 │   │   ├── api/       auth, users, contacts, conversations, messages,
 │   │   │              members, receipts, events, settings
-│   │   ├── core/      config, db session, security (cookie sessions)
+│   │   ├── core/      config, db session, security (cookie sessions), validators
 │   │   ├── models.py  SQLAlchemy schema (docs/schema.md)
 │   │   ├── services/  conversation resolution, message/receipt logic
-│   │   └── broker.py  in-memory SSE fan-out (per-user queues)
-│   ├── tests/         pytest (auth, CRUD, receipts, SSE, e2e flow)
+│   │   └── broker.py  in-memory SSE fan-out (per-user queues, multi-session aware)
+│   ├── tests/         pytest (auth, CRUD, receipts, SSE, validation, multi-session, e2e)
 │   └── seed/          sample-db transform + natural chat corpus
 ├── deploy/            Dockerfiles, docker-compose.yml, Caddyfile, deploy.sh
-└── docs/              schema.md, api.md
+└── docs/              schema.md, api.md, bonus-plan.md
 ```
 
 **Data flow:** REST carries durable operations (auth, contacts, conversation
 CRUD, send, receipts). `GET /api/events` streams server→client events
 (`message.new`, `message.status`, `typing.update`, `presence.update`,
-`conversation.updated`) to every connected session. Typing and presence live
-only in server memory; messages/receipts are the durable log the client
-refetches on reconnect.
+`conversation.updated`) to every connected session of every recipient.
+Typing and presence live only in server memory; messages/receipts are the
+durable log the client refetches on reconnect.
 
 ## Setup
 
@@ -78,16 +101,16 @@ npm install
 npm run dev                               # http://localhost:3000
 ```
 
-The dev server talks to `http://localhost:8000` via the production proxy
-layout; in production Caddy routes `/api/*` to the backend and everything
-else to Next.js (see `deploy/Caddyfile`).
+In production Caddy routes `/api/*` to the backend and everything else to
+Next.js (see `deploy/Caddyfile`).
 
 ### Seed / demo accounts
 
 `python -m seed.transform` imports the provided sample SQLite dump
-(users, contacts, groups, memberships, message timeline), replaces message
-bodies with natural chat text, remaps statuses to receipt rows, and adds a
-demo user with fresh conversations:
+(users, contacts, groups, memberships, message timeline), normalizes
+identities to the API's rules (phones to `+1` + 10 digits, usernames
+slugified), replaces message bodies with natural chat text, remaps statuses
+to receipt rows, and adds a demo user with fresh conversations:
 
 | Login | OTP | Notes |
 |---|---|---|
@@ -104,19 +127,23 @@ cursor + unread counts on `conversation_members`, group roles
 
 ## API overview
 
-See **`docs/api.md`** for the full endpoint table and SSE event catalog, or
-run the backend and open `http://localhost:8000/docs` (OpenAPI).
+See **`docs/api.md`** for the full endpoint table, validation rules and SSE
+event catalog, or run the backend and open `http://localhost:8000/docs`
+(OpenAPI).
 
 ## Testing
 
 ```bash
-cd backend  && .venv/bin/pytest          # 21 tests: auth, CRUD, receipts, SSE, e2e
+cd backend  && .venv/bin/pytest          # 50 tests
 cd frontend && npm test                  # vitest: time, status ticks, store, SSE reconnect
              && npm run typecheck        # tsc --noEmit
 ```
 
-The e2e test boots a real uvicorn server and drives a full conversation over
-HTTP + SSE: register → contact → typing → send → delivered → read.
+Coverage includes: auth/registration flows, contact + conversation CRUD,
+idempotent sends, the receipt state machine, group admin guards, input
+validation (27 constraint tests), multi-session presence and delivery
+(two-tab fan-out), a live-SSE integration test, and a full end-to-end
+conversation flow (register → contact → typing → send → delivered → read).
 
 ## Deployment
 
@@ -133,16 +160,28 @@ HTTP + SSE: register → contact → typing → send → delivered → read.
 Images: `GCP_REGION-docker.pkg.dev/GCP_PROJECT_ID/GCP_REPO_NAME/
 signal-{backend,frontend}`.
 
+## Roadmap — bonus stages
+
+The optional assignment bonuses are planned in **`docs/bonus-plan.md`**
+(each stage independently shippable):
+
+1. **Attachments** — images/files in messages
+2. **Reactions** — emoji reactions on messages
+3. **Reply / quote** — quoted replies
+4. **Disappearing messages** — functional per-conversation timers
+5. **Dark mode** — Signal dark palette, theme setting
+6. **Responsive polish + keyboard shortcuts**
+
 ## Assumptions
 
 - OTP verification is mocked: the code is always `123456`, no SMS is sent.
 - Real end-to-end encryption is **not** implemented (per the assignment:
   encryption can be mocked). Nothing is claimed to be encrypted.
-- "Online" is derived from an active SSE connection; `last_seen_at` updates on
-  disconnect. Single-device sessions (no multi-device sync).
+- "Online" is derived from active SSE connections; `last_seen_at` updates when
+  the user's last session disconnects.
 - Voice/video calls, stories, and linked devices are "Coming Soon" placeholders.
 - Message attachments, reactions, reply-quote, disappearing messages and dark
-  mode are future/bonus work.
+  mode are future/bonus work (see `docs/bonus-plan.md`).
 
 ## Credits
 
