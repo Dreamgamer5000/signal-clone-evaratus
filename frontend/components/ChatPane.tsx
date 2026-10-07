@@ -9,6 +9,7 @@ import { Composer } from './Composer';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import { useAppStore } from '@/lib/store';
 import {
+  ApiError,
   getConversation,
   getMessages,
   sendReceipts,
@@ -41,6 +42,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
     (ConversationSummary & { members: Member[] }) | null
   >(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [oldestId, setOldestId] = useState<number | null>(null);
@@ -122,10 +124,20 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   useEffect(() => {
     setSummary(null);
     setHistoryLoaded(false);
+    setLoadError(null);
     setOldestId(null);
     readSentRef.current = new Set();
     store.getState().openConversation(conversationId);
-    loadLatest().catch(() => setHistoryLoaded(true));
+    loadLatest()
+      .then(() => setLoadError(null))
+      .catch((err) => {
+        setHistoryLoaded(true);
+        setLoadError(
+          err instanceof ApiError && err.status === 403
+            ? 'You are not a member of this conversation'
+            : 'This conversation could not be loaded',
+        );
+      });
   }, [conversationId, loadLatest, store]);
 
   // SSE reconnect: refetch the open thread
@@ -222,9 +234,16 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
       });
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch {
-      store
-        .getState()
-        .pushToast('Message failed to send. Try again.');
+      const s = store.getState();
+      useAppStore.setState({
+        messages: {
+          ...s.messages,
+          [conversationId]: (s.messages[conversationId] ?? []).filter(
+            (m) => m.message_id !== optimistic.message_id,
+          ),
+        },
+      });
+      store.getState().pushToast('Message failed to send. Try again.');
     }
   }
 
@@ -268,6 +287,27 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   const typingNames = typingIds
     .filter((id) => me == null || id !== me.user_id)
     .map((id) => userNames[id] ?? summary?.members.find((m) => m.user_id === id)?.display_name ?? 'Someone');
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col h-full flex-1 min-w-0 bg-gray-02 items-center justify-center">
+        <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-4">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#848484" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v4M12 16h.01" />
+          </svg>
+        </div>
+        <p className="text-gray-60 text-sm mb-4">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => router.push('/chats')}
+          className="px-5 py-2.5 rounded-lg bg-ultramarine text-white text-sm font-medium hover:bg-ultramarine-dark"
+        >
+          Back to chats
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full flex-1 min-w-0 bg-white">
