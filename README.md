@@ -157,8 +157,10 @@ conversation flow (register → contact → typing → send → delivered → re
 - `deploy.sh` — build + push images to Artifact Registry, then pull and start
   the compose stack on the VM
 
-Images: `GCP_REGION-docker.pkg.dev/GCP_PROJECT_ID/GCP_REPO_NAME/
-signal-{backend,frontend}`.
+Cloud identifiers (project, region, registry, VM) are **not** in the repo —
+copy `deploy/.env.example` to `deploy/.env` (gitignored) and fill in your own
+values before deploying. Image references resolve to
+`$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_REPO_NAME/signal-{backend,frontend}`.
 
 ## Roadmap — bonus stages
 

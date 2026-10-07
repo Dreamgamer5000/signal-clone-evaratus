@@ -1,6 +1,8 @@
+# Image references are built from deploy/.env (gitignored, copied to the VM
+# next to this file). docker compose reads .env automatically.
 services:
   signal-backend:
-    image: GCP_REGION-docker.pkg.dev/GCP_PROJECT_ID/GCP_REPO_NAME/signal-backend:latest
+    image: ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GCP_REPO_NAME}/signal-backend:latest
     container_name: signal_backend
     init: true
     restart: always
@@ -15,7 +17,7 @@ services:
       - web_net
 
   signal-frontend:
-    image: GCP_REGION-docker.pkg.dev/GCP_PROJECT_ID/GCP_REPO_NAME/signal-frontend:latest
+    image: ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GCP_REPO_NAME}/signal-frontend:latest
     container_name: signal_frontend
     init: true
     restart: always
