@@ -22,6 +22,13 @@ export interface Contact {
 export type MessageKind = 'text' | 'system';
 export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read';
 
+export interface Attachment {
+  attachment_id: number;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+}
+
 export interface Message {
   message_id: number;
   conversation_id: number;
@@ -32,6 +39,7 @@ export interface Message {
   created_at: number;
   status: MessageStatus;
   sender_name?: string | null;
+  attachments?: Attachment[];
 }
 
 export interface ConversationSummary {

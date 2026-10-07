@@ -12,8 +12,16 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const res = await fetch(path, {
     method,
     credentials: 'include',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    headers:
+      body !== undefined && !(body instanceof FormData)
+        ? { 'Content-Type': 'application/json' }
+        : undefined,
+    body:
+      body === undefined
+        ? undefined
+        : body instanceof FormData
+          ? body
+          : JSON.stringify(body),
   });
   if (!res.ok) {
     let detail = res.statusText;
@@ -185,3 +193,20 @@ export function setMemberRole(
 ): Promise<import('./types').Member> {
   return apiPatch(`/api/conversations/${conversationId}/members/${userId}`, { role });
 }
+
+export function sendMessageWithFile(
+  id: number,
+  clientId: string,
+  body: string,
+  file: File,
+): Promise<Message> {
+  const form = new FormData();
+  form.append('client_id', clientId);
+  if (body.trim()) form.append('body', body);
+  form.append('file', file);
+  return request<FormMessage>('POST', `/api/conversations/${id}/messages`, form as unknown as Record<string, unknown>).then(
+    (r) => r as unknown as Message,
+  );
+}
+
+type FormMessage = Message;

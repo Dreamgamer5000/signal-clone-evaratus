@@ -15,6 +15,7 @@ import {
   getMessages,
   sendReceipts,
   sendMessage,
+  sendMessageWithFile,
   sendTyping,
 } from '@/lib/api';
 import { tickState } from '@/lib/status';
@@ -199,7 +200,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
     if (el != null && el.scrollTop < 60) loadOlder();
   }
 
-  async function handleSend(body: string) {
+  async function handleSend(body: string, file?: File) {
     const clientId =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
@@ -209,15 +210,20 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
       conversation_id: conversationId,
       sender_id: me?.user_id ?? -1,
       client_id: clientId,
-      body,
+      body: file ? (body ? body : file.name) : body,
       kind: 'text',
       created_at: Date.now(),
       status: 'sending',
+      attachments: file
+        ? [{ attachment_id: -1, file_name: file.name, mime_type: file.type, size_bytes: file.size }]
+        : [],
     };
     store.getState().applyMessageNew(optimistic);
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     try {
-      const saved = await sendMessage(conversationId, clientId, body);
+      const saved = file
+        ? await sendMessageWithFile(conversationId, clientId, body, file)
+        : await sendMessage(conversationId, clientId, body);
       // Reconcile by client_id: the optimistic row and any SSE-echoed copy of
       // this message share the same client_id, so drop them all and keep one.
       useAppStore.setState((s) => {
