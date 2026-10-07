@@ -22,3 +22,16 @@ export function filterConversations(
     return title.includes(q) || peer.includes(q) || username.includes(q);
   });
 }
+
+export type ListTab = 'all' | 'unread' | 'archived';
+
+export function applyTab(items: ConversationSummary[], tab: ListTab): ConversationSummary[] {
+  switch (tab) {
+    case 'all':
+      return items.filter((c) => !c.is_archived);
+    case 'unread':
+      return items.filter((c) => !c.is_archived && c.unread_count > 0);
+    case 'archived':
+      return items.filter((c) => c.is_archived);
+  }
+}

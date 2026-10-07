@@ -7,6 +7,7 @@ import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { Composer } from './Composer';
 import { GroupInfoPanel } from './GroupInfoPanel';
+import { ComingSoonModal } from './ComingSoonModal';
 import { useAppStore } from '@/lib/store';
 import {
   ApiError,
@@ -42,6 +43,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
     (ConversationSummary & { members: Member[] }) | null
   >(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showEncryption, setShowEncryption] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -345,6 +347,17 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
         )}
         <button
           type="button"
+          aria-label="Encryption info"
+          onClick={() => setShowEncryption(true)}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-gray-60 hover:bg-gray-02"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+            <rect x="5" y="11" width="14" height="9" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          </svg>
+        </button>
+        <button
+          type="button"
           aria-label="Call"
           onClick={() => useAppStore.getState().pushToast('Voice calls — coming soon')}
           className="w-9 h-9 rounded-full flex items-center justify-center text-gray-60 hover:bg-gray-02"
@@ -389,6 +402,13 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
           sendTyping(conversationId, active).catch(() => {})
         }
       />
+      {showEncryption && (
+        <ComingSoonModal
+          title="End-to-end encryption"
+          description="Messages in this demo are simulated as end-to-end encrypted — real Signal sessions, keys and sealed sender are not implemented. This is a placeholder."
+          onClose={() => setShowEncryption(false)}
+        />
+      )}
       {showGroupInfo && summary != null && (
         <GroupInfoPanel
           conversationId={conversationId}

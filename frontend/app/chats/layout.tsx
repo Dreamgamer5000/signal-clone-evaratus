@@ -10,6 +10,14 @@ import { ConversationList } from '@/components/ConversationList';
 import { NewChatModal } from '@/components/NewChatModal';
 import { NewGroupModal } from '@/components/NewGroupModal';
 
+function refreshConversations() {
+  Promise.all([getConversations(false), getConversations(true)])
+    .then(([active, archived]) =>
+      useAppStore.getState().setConversations([...active, ...archived]),
+    )
+    .catch(() => {});
+}
+
 function ChatShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -38,15 +46,11 @@ function ChatShell({ children }: { children: React.ReactNode }) {
     if (!ready || connectedRef.current) return;
     connectedRef.current = true;
 
-    getConversations()
-      .then((list) => store.getState().setConversations(list))
-      .catch(() => {});
+    refreshConversations();
 
     const stop = connectSSE({
       onOpen: () => {
-        getConversations()
-          .then((list) => store.getState().setConversations(list))
-          .catch(() => {});
+        refreshConversations();
         store.getState().bumpSseEpoch();
       },
       onMessageNew: (message) => {
@@ -62,11 +66,7 @@ function ChatShell({ children }: { children: React.ReactNode }) {
       onMessageStatus: (payload) => store.getState().applyMessageStatus(payload),
       onTyping: (payload) => store.getState().applyTyping(payload),
       onPresence: (payload) => store.getState().applyPresence(payload),
-      onConversationUpdated: () => {
-        getConversations()
-          .then((list) => store.getState().setConversations(list))
-          .catch(() => {});
-      },
+      onConversationUpdated: refreshConversations,
     });
     return () => {
       stop();

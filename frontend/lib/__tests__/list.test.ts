@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sortConversations, filterConversations } from '../list'
+import { sortConversations, filterConversations, applyTab } from '../list'
 
 const mk = (id: number, last: number, pinned = false) =>
   ({ conversation_id: id, is_pinned: pinned, last_message: { created_at: last } }) as any
@@ -15,4 +15,15 @@ it('filters by query against title or peer name', () => {
   ] as any
   expect(filterConversations(items, 'bo').map((c) => c.conversation_id)).toEqual([2])
   expect(filterConversations(items, 'team').map((c) => c.conversation_id)).toEqual([1])
+})
+
+it('tabs filter archived and unread', () => {
+  const items = [
+    { conversation_id: 1, is_archived: false, unread_count: 2 },
+    { conversation_id: 2, is_archived: false, unread_count: 0 },
+    { conversation_id: 3, is_archived: true, unread_count: 1 },
+  ] as any
+  expect(applyTab(items, 'all').map((c) => c.conversation_id)).toEqual([1, 2])
+  expect(applyTab(items, 'unread').map((c) => c.conversation_id)).toEqual([1])
+  expect(applyTab(items, 'archived').map((c) => c.conversation_id)).toEqual([3])
 })
