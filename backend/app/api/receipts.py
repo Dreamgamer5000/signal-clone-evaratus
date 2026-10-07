@@ -59,7 +59,7 @@ def post_receipts(
             member.last_read_message_id = marked[-1]
     db.commit()
     broker.publish(
-        _others(db, conversation_id, user.user_id),
+        member_ids(db, conversation_id),
         "message.status",
         {
             "conversation_id": conversation_id,
