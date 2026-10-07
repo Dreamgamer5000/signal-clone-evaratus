@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { SearchBar } from './SearchBar';
 import { ConversationListItem } from './ConversationListItem';
 import { useAppStore } from '@/lib/store';
@@ -11,6 +12,7 @@ interface ConversationListProps {
 }
 
 export function ConversationList({ onNewChat }: ConversationListProps) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const conversations = useAppStore((s) => s.conversations);
   const activeConversationId = useAppStore((s) => s.activeConversationId);
@@ -20,6 +22,11 @@ export function ConversationList({ onNewChat }: ConversationListProps) {
   const me = useAppStore((s) => s.me);
 
   const visible = filterConversations(sortConversations(conversations), query);
+
+  function select(id: number) {
+    openConversation(id);
+    router.push(`/chats/${id}`);
+  }
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -69,7 +76,7 @@ export function ConversationList({ onNewChat }: ConversationListProps) {
               typingUsers={typing[c.conversation_id] ?? []}
               userNames={userNames}
               me={me}
-              onSelect={() => openConversation(c.conversation_id)}
+              onSelect={() => select(c.conversation_id)}
             />
           ))
         )}
