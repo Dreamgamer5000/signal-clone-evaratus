@@ -7,6 +7,9 @@ import { getConversations } from '@/lib/api';
 import { connectSSE } from '@/lib/sse';
 import { useAppStore } from '@/lib/store';
 import { ConversationList } from '@/components/ConversationList';
+import { ShortcutsModal } from '@/components/ShortcutsModal';
+import { matchShortcut } from '@/lib/shortcuts';
+import { sortConversations } from '@/lib/list';
 import { NewChatModal } from '@/components/NewChatModal';
 import { NewGroupModal } from '@/components/NewGroupModal';
 
@@ -22,7 +25,7 @@ function ChatShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
-  const [modal, setModal] = useState<'none' | 'new-chat' | 'new-group'>('none');
+  const [modal, setModal] = useState<'none' | 'new-chat' | 'new-group' | 'shortcuts'>('none');
   const store = useAppStore;
   const connectedRef = useRef(false);
 
@@ -77,6 +80,66 @@ function ChatShell({ children }: { children: React.ReactNode }) {
 
   const chatOpen = /^\/chats\/\d+/.test(pathname ?? '');
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        target != null &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+      const platform = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : 'other';
+      const action = matchShortcut(e, platform);
+      if (!action) return;
+      if (typing && action !== 'close' && action !== 'search') return;
+
+      switch (action) {
+        case 'close':
+          setModal('none');
+          break;
+        case 'search':
+          e.preventDefault();
+          document
+            .querySelector<HTMLInputElement>('input[aria-label="Search"]')
+            ?.focus();
+          break;
+        case 'new-chat':
+          e.preventDefault();
+          setModal('new-chat');
+          break;
+        case 'next-chat':
+        case 'prev-chat': {
+          e.preventDefault();
+          const items = sortConversations(useAppStore.getState().conversations);
+          if (items.length === 0) break;
+          const current = useAppStore.getState().activeConversationId;
+          const idx = items.findIndex((c: { conversation_id: number }) => c.conversation_id === current);
+          const delta = action === 'next-chat' ? 1 : -1;
+          const nextIdx =
+            idx === -1
+              ? 0
+              : Math.min(items.length - 1, Math.max(0, idx + delta));
+          const next = items[nextIdx].conversation_id;
+          useAppStore.getState().openConversation(next);
+          router.push(`/chats/${next}`);
+          break;
+        }
+        case 'focus-composer': {
+          if (!chatOpen) break;
+          e.preventDefault();
+          document.querySelector<HTMLTextAreaElement>('textarea')?.focus();
+          break;
+        }
+        case 'show-help':
+          e.preventDefault();
+          setModal('shortcuts');
+          break;
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [chatOpen, router]);
+
   if (!ready) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
@@ -86,7 +149,7 @@ function ChatShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface">
+    <div className="flex h-dvh overflow-hidden bg-surface">
       <aside
         className={`${chatOpen ? 'hidden md:flex' : 'flex'} w-full md:w-[380px] shrink-0 border-r border-gray-15 flex-col`}
       >
@@ -103,6 +166,9 @@ function ChatShell({ children }: { children: React.ReactNode }) {
       )}
       {modal === 'new-group' && (
         <NewGroupModal onClose={() => setModal('none')} />
+      )}
+      {modal === 'shortcuts' && (
+        <ShortcutsModal onClose={() => setModal('none')} />
       )}
     </div>
   );

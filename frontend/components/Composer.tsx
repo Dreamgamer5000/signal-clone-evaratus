@@ -68,7 +68,7 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-gray-15 bg-surface shrink-0">
+    <div className="border-t border-gray-15 bg-surface shrink-0 app-safe-bottom">
       {replyingTo && (
         <div className="px-3 pt-2">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-02 border-l-2 border-ultramarine text-sm">

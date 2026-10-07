@@ -63,3 +63,10 @@
   --color-gray-90: #f0f0f0;
   --color-gray-95: #f6f6f6;
 }
+
+.app-safe-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+.app-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}

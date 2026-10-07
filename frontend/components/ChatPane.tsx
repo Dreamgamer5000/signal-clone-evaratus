@@ -351,7 +351,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
 
   return (
     <div className="flex flex-col h-full flex-1 min-w-0 bg-surface">
-      <header className="h-[52px] px-4 flex items-center gap-3 border-b border-gray-15 shrink-0">
+      <header className="h-[52px] px-4 flex items-center gap-3 border-b border-gray-15 shrink-0 app-safe-top">
         <button
           type="button"
           aria-label="Back"
