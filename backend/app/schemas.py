@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -67,6 +69,15 @@ class MessageOut(BaseModel):
     kind: str
     created_at: int
     status: str = "sent"
+
+
+class ReceiptIn(BaseModel):
+    message_ids: list[int]
+    status: Literal["delivered", "read"]
+
+
+class TypingIn(BaseModel):
+    active: bool
 
 
 class MemberOut(BaseModel):

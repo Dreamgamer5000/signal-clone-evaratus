@@ -6,6 +6,9 @@ class EventBroker:
         self._queues: dict[int, list[asyncio.Queue]] = {}
         self._presence: set[int] = set()
 
+    def connected_user_ids(self) -> list[int]:
+        return list(self._queues.keys())
+
     def subscribe(self, user_id: int) -> asyncio.Queue:
         queue: asyncio.Queue = asyncio.Queue()
         self._queues.setdefault(user_id, []).append(queue)
@@ -26,15 +29,17 @@ class EventBroker:
             for queue in self._queues.get(user_id, []):
                 queue.put_nowait(frame)
 
-    def set_presence(self, user_id: int, online: bool) -> None:
+    def set_presence(
+        self, user_id: int, online: bool, last_seen_at: int | None = None
+    ) -> None:
         if online:
             self._presence.add(user_id)
         else:
             self._presence.discard(user_id)
         self.publish(
-            list(self._queues.keys()),
+            [uid for uid in self.connected_user_ids() if uid != user_id],
             "presence.update",
-            {"user_id": user_id, "online": online},
+            {"user_id": user_id, "online": online, "last_seen_at": last_seen_at},
         )
 
     def is_online(self, user_id: int) -> bool:
