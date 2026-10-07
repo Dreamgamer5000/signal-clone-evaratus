@@ -52,7 +52,9 @@ conversations (
   avatar_color    TEXT,                        -- groups only
   direct_key      TEXT UNIQUE,                 -- 'min:max' user ids; NULL for groups
   created_by      INTEGER NOT NULL REFERENCES users(user_id),
-  created_at      INTEGER NOT NULL
+  created_at      INTEGER NOT NULL,
+  disappearing_seconds INTEGER NULL CHECK (disappearing_seconds IS NULL
+    OR disappearing_seconds IN (30,300,3600,86400,604800))   -- NULL = off
 )
 
 conversation_members (
@@ -64,8 +66,6 @@ conversation_members (
   is_archived          INTEGER NOT NULL DEFAULT 0,
   is_pinned            INTEGER NOT NULL DEFAULT 0,
   is_muted             INTEGER NOT NULL DEFAULT 0,
-  disappearing_seconds INTEGER NULL CHECK (disappearing_seconds IS NULL
-                        OR disappearing_seconds IN (30,300,3600,86400,604800)),
   PRIMARY KEY (conversation_id, user_id)
 )                                              -- INDEX (user_id, is_archived, is_pinned)
 
@@ -134,8 +134,20 @@ user_settings (
 - **`messages.client_id`** (client-generated UUID, `UNIQUE` with `sender_id`)
   makes retried sends idempotent and lets the client reconcile its optimistic
   bubble with the server copy and any SSE echo.
-- **`kind='system'`** renders group events ("X added Y", "X created the group")
-  as centered dividers instead of bubbles — no separate events table.
+- **`kind='system'`** renders group events ("X added Y", "X created the group",
+  timer changes) as centered dividers instead of bubbles — no separate events
+  table.
+- **Quoted replies** store a *snapshot* of the original (`reply_to_body`,
+  `reply_to_sender_name`) so quotes survive deletion; `reply_to_message_id`
+  goes NULL on delete (`ON DELETE SET NULL`) and the preview renders as
+  "original message deleted".
+- **Attachments** live on disk (`uploads/<user_id>/<uuid>.<ext>`, `storage_path`
+  is server-generated and UNIQUE — never client-supplied), capped at 10 MiB
+  with a mime allow-list; `attachments` rows cascade with their message.
+- **Reactions** are one row per (message, user, emoji) via `UNIQUE`.
+- **Disappearing messages** are conversation-wide (`conversations.
+  disappearing_seconds`); a server-side sweep deletes expired messages
+  (receipts and reactions cascade).
 - **`sessions`** stores only a SHA-256 hash of the cookie token; logout sets
   `revoked_at` for real revocation.
 

@@ -1,5 +1,9 @@
 # Signal Clone — Bonus Stages Implementation Plan
 
+> **STATUS: SHIPPED.** All stages B1–B7 are implemented, tested (73 backend /
+> 18 frontend tests) and deployed to https://signal.rejit.in. This document is
+> kept as the design record.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship the assignment's optional bonuses — attachments, reactions,

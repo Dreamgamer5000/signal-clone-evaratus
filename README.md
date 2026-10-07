@@ -38,9 +38,11 @@ bidirectional throughput of a raw socket.
   them, and presence stays online until the **last** session disconnects
 - **Groups** — create with name + members, admin controls (add/remove/promote,
   last-admin protection), system messages
-- **Signal experience** — conversation list (search, unread pills, pinned,
-  previews), date dividers, toasts, settings shells, "Coming Soon" modals
-  (calls, stories, linked devices)
+- **Signal experience** — conversation list (search, All/Unread/Archived
+  filter tabs, unread pills, pinned, previews), date dividers, toasts,
+  settings shells (privacy / notifications / appearance), "Coming Soon"
+  placeholders for calls, stories and linked devices, and an encryption
+  badge showing the mocked E2E notice
 - **Attachments** — images, video, audio, PDF, text and zip files in
   messages (10 MiB cap, member-only downloads)
 - **Reactions** — quick-emoji hover picker and toggleable emoji chips
@@ -48,7 +50,8 @@ bidirectional throughput of a raw socket.
   the original
 - **Disappearing messages** — per-conversation timers (30 s – 1 week),
   server-enforced sweep with system notices
-- **Dark mode** — Signal dark palette, Light/Dark/System, FOUC-free
+- **Dark mode** — Signal dark palette, FOUC-free; switch via the moon toggle
+  in the chat-list header or Settings → Appearance → Theme (Light/Dark/System)
 - **Keyboard shortcuts** — ⌘K search, ⌘N new chat, Alt+↑/↓, `/` composer,
   `?` help
 - **Input validation** — every request is constrained at the schema boundary
@@ -64,15 +67,18 @@ signal-clone-evaratus/
 ├── frontend/          Next.js app (App Router)
 │   ├── app/           /login, /register, /chats, /chats/[id], /settings
 │   ├── components/    ConversationList, ChatPane, MessageBubble, Composer,
-│   │                  NewChatModal, NewGroupModal, GroupInfoPanel, ToastHost...
-│   └── lib/           api client, sse client, zustand store, status/tick logic
+│   │                  NewChatModal, NewGroupModal, GroupInfoPanel, ToastHost,
+│   │                  Modal, ComingSoonModal, ShortcutsModal...
+│   └── lib/           api client, sse client, zustand store, status ticks,
+│                      theme, shortcuts, list filters, time formatting
 ├── backend/
 │   ├── app/
 │   │   ├── api/       auth, users, contacts, conversations, messages,
 │   │   │              members, receipts, events, settings
 │   │   ├── core/      config, db session, security (cookie sessions), validators
 │   │   ├── models.py  SQLAlchemy schema (docs/schema.md)
-│   │   ├── services/  conversation resolution, message/receipt logic
+│   │   ├── services/  conversation resolution, message/receipt logic,
+│   │   │              disappearing-message sweep
 │   │   └── broker.py  in-memory SSE fan-out (per-user queues, multi-session aware)
 │   ├── tests/         pytest (auth, CRUD, receipts, SSE, validation, multi-session, e2e)
 │   └── seed/          sample-db transform + natural chat corpus
@@ -126,6 +132,21 @@ to receipt rows, and adds a demo user with fresh conversations:
 |---|---|---|
 | `+15550000001` | `123456` | demo user "You" — ready-made chats |
 
+**Seeded people you can message** — open *New chat*, enter the phone number
+(or `@username`), tap *Add as contact*, and start chatting (any of these
+accounts also logs in with OTP `123456`):
+
+| Name | Username | Phone |
+|---|---|---|
+| Daily | `@daily` | `+17135550131` |
+| Often Reason | `@often.reason` | `+13125550101` |
+| Point Month | `@point.month` | `+12125550165` |
+| Between | `@between` | `+19725550131` |
+| Normal | `@normal` | `+13125550124` |
+| Natural | `@natural` | `+14045550141` |
+| Close Small Useful | `@close.small.useful` | `+14165550163` |
+| Great About Group | `@great.about.group` | `+17785550195` |
+
 ## Database schema
 
 See **`docs/schema.md`** for full DDL. Highlights: one `conversations` table
@@ -133,7 +154,10 @@ for both direct and group threads (`direct_key` guarantees one thread per
 pair), `messages.client_id` for idempotent sends, `message_receipts` with
 delivered/read timestamps, message status **derived** (never stored), read
 cursor + unread counts on `conversation_members`, group roles
-(`admin`/`member`) and system messages (`kind='system'`).
+(`admin`/`member`), system messages (`kind='system'`), attachment rows with
+server-generated storage paths, one-per-user emoji reactions, reply quote
+snapshots that survive deletion, and conversation-wide disappearing timers
+enforced by a server-side sweep.
 
 ## API overview
 
