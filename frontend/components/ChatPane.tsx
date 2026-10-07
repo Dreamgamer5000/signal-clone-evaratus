@@ -46,6 +46,11 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showEncryption, setShowEncryption] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{
+    message_id: number;
+    sender_name: string;
+    body: string;
+  } | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [oldestId, setOldestId] = useState<number | null>(null);
@@ -125,9 +130,18 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
   }, [conversationId, store]);
 
   useEffect(() => {
+    function onReply(e: Event) {
+      setReplyingTo((e as CustomEvent).detail);
+    }
+    window.addEventListener('signal-reply', onReply);
+    return () => window.removeEventListener('signal-reply', onReply);
+  }, []);
+
+  useEffect(() => {
     setSummary(null);
     setHistoryLoaded(false);
     setLoadError(null);
+    setReplyingTo(null);
     setOldestId(null);
     readSentRef.current = new Set();
     store.getState().openConversation(conversationId);
@@ -200,7 +214,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
     if (el != null && el.scrollTop < 60) loadOlder();
   }
 
-  async function handleSend(body: string, file?: File) {
+  async function handleSend(body: string, file?: File, replyToId?: number) {
     const clientId =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
@@ -223,7 +237,7 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
     try {
       const saved = file
         ? await sendMessageWithFile(conversationId, clientId, body, file)
-        : await sendMessage(conversationId, clientId, body);
+        : await sendMessage(conversationId, clientId, body, replyToId);
       // Reconcile by client_id: the optimistic row and any SSE-echoed copy of
       // this message share the same client_id, so drop them all and keep one.
       useAppStore.setState((s) => {
@@ -404,6 +418,8 @@ export function ChatPane({ conversationId }: ChatPaneProps) {
 
       <Composer
         placeholder={isGroup ? 'Message the group' : 'Send a message'}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
         onSend={handleSend}
         onTypingChange={(active) =>
           sendTyping(conversationId, active).catch(() => {})

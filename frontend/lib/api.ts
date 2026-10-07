@@ -103,10 +103,12 @@ export function sendMessage(
   id: number,
   clientId: string,
   body: string,
+  replyToId?: number,
 ): Promise<Message> {
   return apiPost(`/api/conversations/${id}/messages`, {
     client_id: clientId,
     body,
+    reply_to_id: replyToId ?? null,
   });
 }
 

@@ -3,16 +3,26 @@
 import { useRef, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 
+interface ReplyTarget {
+  message_id: number;
+  sender_name: string;
+  body: string;
+}
+
 interface ComposerProps {
   disabled?: boolean;
   placeholder?: string;
-  onSend: (body: string, file?: File) => Promise<void> | void;
+  replyingTo?: ReplyTarget | null;
+  onCancelReply?: () => void;
+  onSend: (body: string, file?: File, replyToId?: number) => Promise<void> | void;
   onTypingChange?: (active: boolean) => void;
 }
 
 export function Composer({
   disabled = false,
   placeholder = 'Send a message',
+  replyingTo,
+  onCancelReply,
   onSend,
   onTypingChange,
 }: ComposerProps) {
@@ -53,11 +63,32 @@ export function Composer({
       typingSentRef.current = false;
       onTypingChange?.(false);
     }
-    await onSend(body, outgoing);
+    await onSend(body, outgoing, replyingTo?.message_id);
+    onCancelReply?.();
   }
 
   return (
     <div className="border-t border-gray-15 bg-surface shrink-0">
+      {replyingTo && (
+        <div className="px-3 pt-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-02 border-l-2 border-ultramarine text-sm">
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium text-ultramarine truncate">
+                Reply to {replyingTo.sender_name}
+              </div>
+              <div className="text-xs text-gray-60 truncate">{replyingTo.body}</div>
+            </div>
+            <button
+              type="button"
+              aria-label="Cancel reply"
+              onClick={() => onCancelReply?.()}
+              className="text-gray-60 hover:text-gray-90"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       {file && (
         <div className="px-3 pt-2">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-02 text-sm text-gray-90">

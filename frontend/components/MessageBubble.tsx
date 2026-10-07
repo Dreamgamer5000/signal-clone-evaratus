@@ -1,7 +1,7 @@
 'use client';
 
 import { MessageStatusTick } from './MessageStatusTick';
-import type { Message, User, Attachment } from '@/lib/types';
+import type { Message, User, Attachment, ReplyPreview } from '@/lib/types';
 import { addReaction, removeReaction } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import type { TickState } from '@/lib/status';
@@ -18,6 +18,25 @@ interface MessageBubbleProps {
 }
 
 const QUICK_EMOJI = ['👍', '❤️', '😂', '😮', '😢', '😡'];
+
+function QuoteBlock({ reply, isMine }: { reply: ReplyPreview; isMine: boolean }) {
+  return (
+    <div
+      className={`mb-1 px-2 py-1 rounded-lg border-l-2 text-xs cursor-pointer ${
+        isMine
+          ? 'border-white/70 bg-white/10 text-white'
+          : 'border-ultramarine bg-gray-04 text-gray-90'
+      }`}
+    >
+      <div className={`font-medium ${isMine ? 'text-white/90' : 'text-ultramarine'}`}>
+        {reply.sender_name ?? 'Unknown'}
+      </div>
+      <div className={`truncate ${isMine ? 'text-white/70' : 'text-gray-60'}`}>
+        {reply.deleted ? 'Original message was deleted' : (reply.body ?? '')}
+      </div>
+    </div>
+  );
+}
 
 function ReactionChips({
   message,
@@ -160,6 +179,9 @@ export function MessageBubble({
             {senderName}
           </div>
         )}
+        {message.reply_to && (
+          <QuoteBlock reply={message.reply_to} isMine={isMine} />
+        )}
         {message.attachments && message.attachments.length > 0 && (
           <AttachmentBlock attachments={message.attachments} isMine={isMine} />
         )}
@@ -181,6 +203,26 @@ export function MessageBubble({
           isMine ? 'left-0 -translate-x-full mr-2' : 'right-0 translate-x-full ml-2'
         }`}
       >
+        <button
+          type="button"
+          aria-label="Reply"
+          onClick={() => {
+            const ev = new CustomEvent('signal-reply', {
+              detail: {
+                message_id: message.message_id,
+                sender_name: senderName ?? (me?.display_name ?? 'You'),
+                body: message.body,
+              },
+            });
+            window.dispatchEvent(ev);
+          }}
+          className="w-7 h-7 rounded-full hover:bg-gray-04 text-sm flex items-center justify-center text-gray-60"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M9 17l-6-5 6-5" />
+            <path d="M3 12h11a5 5 0 0 1 5 5v2" />
+          </svg>
+        </button>
         {QUICK_EMOJI.map((e) => (
           <button
             key={e}

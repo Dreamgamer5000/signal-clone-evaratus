@@ -27,6 +27,13 @@ export interface Reaction {
   user_ids: number[];
 }
 
+export interface ReplyPreview {
+  message_id: number | null;
+  sender_name: string | null;
+  body: string | null;
+  deleted: boolean;
+}
+
 export interface Attachment {
   attachment_id: number;
   file_name: string;
@@ -46,6 +53,7 @@ export interface Message {
   sender_name?: string | null;
   attachments?: Attachment[];
   reactions?: Reaction[];
+  reply_to?: ReplyPreview | null;
 }
 
 export interface ConversationSummary {
