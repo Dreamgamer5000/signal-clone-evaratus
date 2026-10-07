@@ -39,7 +39,7 @@ from app.schemas import (
     ReactionOut,
 )
 from app.services.conversations import member_ids
-from app.services.messages import add_receipt_rows, derive_status
+from app.services.messages import add_receipt_rows, derive_status, reply_preview
 
 router = APIRouter()
 
@@ -139,6 +139,7 @@ def _message_out(
         sender_name=sender_name,
         attachments=attachments or [],
         reactions=reactions or [],
+        reply_to=reply_preview(m),
     )
 
 
@@ -154,6 +155,22 @@ def _receipts_for(
     for r in rows:
         out.setdefault(r.message_id, []).append(r)
     return out
+
+
+def _resolve_reply_target(
+    db: Session, conversation_id: int, reply_to_id: int | None
+) -> tuple[int, str, str | None] | None:
+    if reply_to_id is None:
+        return None
+    target = db.get(Message, reply_to_id)
+    if target is None or target.conversation_id != conversation_id:
+        raise HTTPException(404, "reply target not found")
+    sender = db.get(User, target.sender_id)
+    return (
+        target.message_id,
+        target.body[:200],
+        sender.display_name if sender is not None else None,
+    )
 
 
 @router.post("/{conversation_id}/messages", response_model=MessageOut)
@@ -176,6 +193,15 @@ async def send_message(
         body = str(form.get("body") or "").strip()
         if body and len(body) > 4000:
             raise HTTPException(422, "body must be 1-4000 characters")
+        raw_reply = form.get("reply_to_id")
+        reply_to_id: int | None = None
+        if raw_reply is not None and str(raw_reply).strip() != "":
+            try:
+                reply_to_id = int(str(raw_reply))
+            except ValueError:
+                reply_to_id = -1
+            if reply_to_id < 1:
+                raise HTTPException(422, "reply_to_id must be a positive integer")
         raw_file = form.get("file")
         if raw_file is not None and not isinstance(raw_file, UploadFile):
             raise HTTPException(422, "file must be an uploaded file")
@@ -204,9 +230,11 @@ async def send_message(
             raise RequestValidationError(e.errors()) from e
         client_id = payload.client_id
         body = payload.body
+        reply_to_id = payload.reply_to_id
         if not body or len(body) > 4000:
             raise HTTPException(422, "body must be 1-4000 characters")
     _require_membership(db, conversation_id, user.user_id)
+    reply_target = _resolve_reply_target(db, conversation_id, reply_to_id)
     existing = db.scalar(
         select(Message).where(
             Message.sender_id == user.user_id,
@@ -257,6 +285,10 @@ async def send_message(
         kind="text",
         created_at=now_ms(),
     )
+    if reply_target is not None:
+        msg.reply_to_message_id = reply_target[0]
+        msg.reply_to_body = reply_target[1]
+        msg.reply_to_sender_name = reply_target[2]
     db.add(msg)
     db.flush()
     atts: list[AttachmentOut] = []

@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy import create_engine
-from app.core.db import Base, SessionLocal, init_db
+from app.core.db import Base, SessionLocal, init_db, register_pragmas
 import app.core.db as dbmod
 
 
@@ -10,6 +10,7 @@ def test_engine(tmp_path):
         f"sqlite:///{tmp_path}/t.db",
         connect_args={"check_same_thread": False},
     )
+    register_pragmas(eng)
     Base.metadata.create_all(eng)
     dbmod.engine = eng
     dbmod.SessionLocal.configure(bind=eng)

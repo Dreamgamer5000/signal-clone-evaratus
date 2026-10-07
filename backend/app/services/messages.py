@@ -1,7 +1,19 @@
 from sqlalchemy.orm import Session
 
 from app.models import Message, MessageReceipt
+from app.schemas import ReplyPreview
 from app.services.conversations import member_ids
+
+
+def reply_preview(m: Message) -> ReplyPreview | None:
+    if m.reply_to_body is None:
+        return None
+    return ReplyPreview(
+        message_id=m.reply_to_message_id,
+        sender_name=m.reply_to_sender_name,
+        body=m.reply_to_body,
+        deleted=m.reply_to_message_id is None,
+    )
 
 
 def derive_status(receipts: list[MessageReceipt], viewer_id: int) -> str:

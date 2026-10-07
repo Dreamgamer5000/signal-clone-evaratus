@@ -30,7 +30,7 @@ from app.schemas import (
     UserOut,
 )
 from app.services.conversations import get_or_create_direct
-from app.services.messages import derive_status
+from app.services.messages import derive_status, reply_preview
 
 router = APIRouter()
 
@@ -75,6 +75,7 @@ def _message_out(db: Session, m: Message, viewer_id: int) -> MessageOut:
         sender_name=sender.display_name if sender is not None else None,
         attachments=attachments,
         reactions=reactions,
+        reply_to=reply_preview(m),
     )
 
 

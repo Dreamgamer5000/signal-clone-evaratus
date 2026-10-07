@@ -85,6 +85,7 @@ class ContactOut(BaseModel):
 class MessageIn(BaseModel):
     client_id: ClientId
     body: MessageBody
+    reply_to_id: PositiveId | None = None
 
 
 class ReactionIn(BaseModel):
@@ -103,6 +104,13 @@ class ReactionOut(BaseModel):
     user_ids: list[int] = []
 
 
+class ReplyPreview(BaseModel):
+    message_id: int | None
+    sender_name: str | None
+    body: str | None
+    deleted: bool
+
+
 class MessageOut(BaseModel):
     message_id: int
     conversation_id: int
@@ -115,6 +123,7 @@ class MessageOut(BaseModel):
     sender_name: str | None = None
     attachments: list[AttachmentOut] = []
     reactions: list[ReactionOut] = []
+    reply_to: ReplyPreview | None = None
 
 
 class ReceiptIn(BaseModel):

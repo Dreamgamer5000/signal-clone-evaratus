@@ -14,12 +14,18 @@ engine = create_engine(
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
-@event.listens_for(engine, "connect")
 def _sqlite_pragmas(dbapi_conn, _):
     cur = dbapi_conn.cursor()
     cur.execute("PRAGMA foreign_keys=ON")
     cur.execute("PRAGMA journal_mode=WAL")
     cur.close()
+
+
+def register_pragmas(eng) -> None:
+    event.listens_for(eng, "connect")(_sqlite_pragmas)
+
+
+register_pragmas(engine)
 
 
 def init_db(eng=None):

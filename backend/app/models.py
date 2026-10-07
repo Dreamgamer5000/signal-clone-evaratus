@@ -151,6 +151,11 @@ class Message(Base):
         Text, nullable=False, default="text", server_default=text("'text'")
     )
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    reply_to_message_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("messages.message_id", ondelete="SET NULL"), nullable=True
+    )
+    reply_to_body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reply_to_sender_name: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("sender_id", "client_id", name="uq_messages_sender_client"),
