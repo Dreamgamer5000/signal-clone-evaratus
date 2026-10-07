@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Avatar, AVATAR_COLORS, AVATAR_COLOR_KEYS } from '@/components/Avatar';
 import { ComingSoonModal } from '@/components/ComingSoonModal';
 import { getSettings, patchSettings, patchMe } from '@/lib/api';
-import { logout } from '@/lib/auth';
+import { fetchMe, logout } from '@/lib/auth';
 import { useAppStore } from '@/lib/store';
 import type { User } from '@/lib/types';
 
@@ -62,6 +62,21 @@ export default function SettingsPage() {
   const [about, setAbout] = useState('');
   const [avatarColor, setAvatarColor] = useState('A120');
 
+  // This route can be reached directly (fresh load / shared URL), so the
+  // profile must not depend on the in-memory store alone.
+  useEffect(() => {
+    if (me) return;
+    let cancelled = false;
+    fetchMe().then((user) => {
+      if (cancelled) return;
+      if (user) setMe(user);
+      else router.replace('/login');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [me, router, setMe]);
+
   useEffect(() => {
     getSettings()
       .then(setSettings)
@@ -110,6 +125,14 @@ export default function SettingsPage() {
     await logout();
     setMe(null);
     router.replace('/login');
+  }
+
+  if (!me) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-ultramarine border-t-transparent animate-spin" />
+      </div>
+    );
   }
 
   return (

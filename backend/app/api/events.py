@@ -16,7 +16,8 @@ router = APIRouter()
 
 async def _event_stream(user_id: int):
     queue = broker.subscribe(user_id)
-    broker.set_presence(user_id, True)
+    if not broker.is_online(user_id):
+        broker.set_presence(user_id, True)
     try:
         while True:
             try:
@@ -32,16 +33,18 @@ async def _event_stream(user_id: int):
             )
     finally:
         broker.unsubscribe(user_id, queue)
-        last_seen_at = now_ms()
-        db: Session = SessionLocal()
-        try:
-            row = db.get(User, user_id)
-            if row is not None:
-                row.last_seen_at = last_seen_at
-                db.commit()
-        finally:
-            db.close()
-        broker.set_presence(user_id, False, last_seen_at)
+        # Multi-session: only go offline when the user's last tab/device drops.
+        if not broker.has_connection(user_id):
+            last_seen_at = now_ms()
+            db: Session = SessionLocal()
+            try:
+                row = db.get(User, user_id)
+                if row is not None:
+                    row.last_seen_at = last_seen_at
+                    db.commit()
+            finally:
+                db.close()
+            broker.set_presence(user_id, False, last_seen_at)
 
 
 @router.get("/events")

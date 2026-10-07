@@ -35,7 +35,7 @@ export function ConversationList({ onNewChat }: ConversationListProps) {
         <button
           type="button"
           onClick={() => {
-            window.location.href = '/settings';
+            router.push('/settings');
           }}
           aria-label="Settings"
           className="w-9 h-9 rounded-full flex items-center justify-center text-gray-60 hover:bg-gray-02"

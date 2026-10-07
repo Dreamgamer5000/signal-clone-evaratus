@@ -9,6 +9,10 @@ class EventBroker:
     def connected_user_ids(self) -> list[int]:
         return list(self._queues.keys())
 
+    def has_connection(self, user_id: int) -> bool:
+        """True while any session (tab/device) of this user is attached."""
+        return bool(self._queues.get(user_id))
+
     def subscribe(self, user_id: int) -> asyncio.Queue:
         queue: asyncio.Queue = asyncio.Queue()
         self._queues.setdefault(user_id, []).append(queue)
